@@ -1,0 +1,45 @@
+・初めに
+ローカル環境で使用できるChatGPTのようなAIを作成している。
+変更内容を挙げるので変更するために必要なコードを生成すること。
+コードの生成は変更箇所だけを「前後コード付き」で丸ごとコピペ可能な形式で出力すること。
+現在のファイル構成を添付していくので、すべてのファイルを添付するまで返答しないこと。
+
+・変更内容
+第9段階：記憶と人格変化の連動
+保存した記憶をもとに、話題ごとの反応や態度が変わるようにする。
+単なる設定変更ではなく、関係性の蓄積が感じられる挙動を目指す。
+
+・現在のファイル構成
+・integrated_ai
+　/style.txt
+　/start_desktop_ai.bat
+　/start_ai.bat
+　/voicevox_client.py
+　/prompts.py
+　/openai_client.py
+　/ollama_client.py
+　/memory_store.py
+　/main.py
+　/llm_client.py
+　/import_good_feedback.py
+　/file_ops.py
+　/auto_score.py
+　/auto_eval.py
+　/app_desktop.py
+　/style.txt
+　/app_desktop.py
+
+・integrated_ai/static
+　/index.html
+
+・integrated_ai/rules
+　/00_base.txt
+　/10_safety.txt
+　/20_no_hallucination.txt
+　/30_format.txt
+
+・integrated_ai/prompts
+　/format_system.txt
+　/summarize_system.txt
+　/title_system.txt
+　/good_examples_system.txt

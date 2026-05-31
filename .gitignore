@@ -1,0 +1,44 @@
+# Build outputs
+build/
+dist/
+*.spec
+
+# Secrets
+APIkey.txt
+.env
+
+# Runtime data / personal data
+sessions.json
+memories.json
+feedback.jsonl
+eval_logs.jsonl
+eval_results.jsonl
+
+# Local app data
+workspace/
+VOICEVOX/
+__pycache__/
+
+# Backups / old copies
+変更前置き場/
+*コピー*.py
+
+build/
+dist/
+*.spec
+
+APIkey.txt
+.env
+
+sessions.json
+memories.json
+feedback.jsonl
+eval_logs.jsonl
+eval_results.jsonl
+
+workspace/
+VOICEVOX/
+__pycache__/
+
+変更前置き場/
+*コピー*.py

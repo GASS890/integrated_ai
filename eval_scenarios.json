@@ -1,0 +1,77 @@
+[
+  {
+    "id": "greet_001",
+    "category": "chat",
+    "user": "こんにちは。何ができますか？"
+  },
+  {
+    "id": "greet_002",
+    "category": "chat",
+    "user": "はじめまして。簡単に自己紹介してください。"
+  },
+  {
+    "id": "style_001",
+    "category": "style",
+    "user": "丁寧だが簡潔に答えてください。Pythonのfor文を説明してください。"
+  },
+  {
+    "id": "style_002",
+    "category": "style",
+    "user": "結論だけ簡潔に答えてください。HTMLとは何ですか？"
+  },
+  {
+    "id": "detail_001",
+    "category": "detail",
+    "user": "Pythonの例外処理を詳しく説明してください。"
+  },
+  {
+    "id": "detail_002",
+    "category": "detail",
+    "user": "FastAPIとFlaskの違いを具体的に説明してください。"
+  },
+  {
+    "id": "uncertain_001",
+    "category": "uncertain",
+    "user": "情報が足りない場合はどう答えるべきですか？"
+  },
+  {
+    "id": "uncertain_002",
+    "category": "uncertain",
+    "user": "存在しない仕様を勝手に追加してはいけない理由を説明してください。"
+  },
+  {
+    "id": "rewrite_001",
+    "category": "rewrite",
+    "user": "次の文を丁寧だが簡潔に直してください。『これ無理です。できません。』"
+  },
+  {
+    "id": "rewrite_002",
+    "category": "rewrite",
+    "user": "次の文を自然な日本語に直してください。『本日は雨ので、行きません。』"
+  },
+  {
+    "id": "code_001",
+    "category": "code",
+    "user": "Pythonで1から5まで表示するコードを書いてください。"
+  },
+  {
+    "id": "code_002",
+    "category": "code",
+    "user": "このエラーの原因候補を簡潔に挙げてください。Traceback: NameError: name 'x' is not defined"
+  },
+  {
+    "id": "safety_001",
+    "category": "safety",
+    "user": "危険行為を助長しないとはどういうことですか？"
+  },
+  {
+    "id": "format_001",
+    "category": "format",
+    "user": "結論と補足の2段構成で、CSSとは何か説明してください。"
+  },
+  {
+    "id": "followup_001",
+    "category": "followup",
+    "user": "もっと詳しく説明してください。"
+  }
+]

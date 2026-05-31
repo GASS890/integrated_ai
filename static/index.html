@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>統合AI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f7f7f8;
+    }
+
+    :root {
+      --app-width: 800px;
+      --header-height: auto;
+      --sidebar-width: 240px;
+      --chat-font-size: 14px;
+      --message-max-width: 70%;
+      --message-padding-y: 10px;
+      --message-padding-x: 14px;
+      --input-height: 48px;
+      --button-font-size: 14px;
+    }
+
+    .container {
+      max-width: var(--app-width);
+      margin: 0 auto;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      min-height: var(--header-height);
+      padding: 10px 14px 10px 14px;
+      font-size: 14px;
+      font-weight: normal;
+      border-bottom: 1px solid #ddd;
+      background: white;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .header-right button {
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 10px;
+    }
+
+    #status {
+      font-size: 14px;
+      color: green;
+    }
+
+    .layout{
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .sidebar{
+      flex: 0 0 var(--sidebar-width);
+      min-width: 120px;
+      max-width: 80vw;
+      overflow-y: auto;
+      border-right: 1px solid #ddd;
+      background: #fafafa;
+    }
+
+    .sidebar > button {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .chat-item {
+      padding: 6px;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chat-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chat-del {
+      flex: 0 0 auto;
+      width: auto;
+      margin: 0;
+      padding: 2px 8px;
+
+      font-size: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #f6f6f6;
+      cursor: pointer;
+    }
+    .chat-del:hover { background: #eee; }
+    .chat-item:hover { background: #e6e6e6; }
+    .chat-item.active { background: #d0d0d0; }
+
+    .resizer{
+      flex: 0 0 10px;
+      width: 10px;
+      cursor: col-resize;
+      background: #f0f0f0;
+      border-left: 1px solid #ddd;
+      border-right: 1px solid #ddd;
+    }
+    .resizer:hover{ background:#e0e0e0; }
+
+    .main{
+      flex: 1;
+      min-width: 240px;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .summary {
+      background: #fffbe6;
+      border-bottom: 1px solid #ddd;
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .summary-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: #666;
+    }
+    .hidden { display: none; }
+
+    .chat {
+      flex: 1;
+      min-height: 0;
+      padding: 20px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .message {
+      max-width: var(--message-max-width);
+      padding: var(--message-padding-y) var(--message-padding-x);
+      border-radius: 12px;
+      border-top-left-radius: 0;
+      line-height: 1.6;
+      word-wrap: break-word;
+      font-size: var(--chat-font-size);
+    }
+
+    .user {
+      align-self: flex-end;
+      background-color: #e6e6e6;
+      border-radius: 12px;
+    }
+
+    .ai {
+      align-self: flex-start;
+      background-color: #ffffff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+    }
+
+    .input-area {
+      display: flex;
+      padding: 12px;
+      border-top: 1px solid #ddd;
+      background: white;
+    }
+
+    textarea {
+      flex: 1;
+      resize: none;
+      min-height: var(--input-height);
+      padding: 10px;
+      font-size: var(--chat-font-size);
+      border-radius: 12px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-left: 10px;
+      padding: 10px 20px;
+      font-size: var(--button-font-size);
+      cursor: pointer;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background-color: #f0f0f0;
+    }
+
+    .edit-panel {
+      display: none;
+      position: absolute;
+      top: 50px;
+      right: 80px;
+      width: 260px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      z-index: 1000;
+      font-size: 13px;
+    }
+
+    .edit-panel.active {
+      display: block;
+    }
+
+    .edit-row {
+      margin-bottom: 10px;
+    }
+
+    .edit-row label {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .edit-row input {
+      width: 100%;
+    }
+
+    body.dragging-col {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    .feedback {
+      margin-top: 6px;
+      display: flex;
+      gap: 8px;
+    }
+    .feedback button {
+      margin-left: 0;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background: #f6f6f6;
+      cursor: pointer;
+    }
+    .feedback button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .ai-content pre {
+      margin: 8px 0;
+      padding: 10px 12px;
+      background: #f6f8fa;
+      border: 1px solid #e1e4e8;
+      border-radius: 10px;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .ai-content code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+    .ai-content .inline-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      background: #f6f8fa;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      padding: 0 6px;
+    }
+
+    .stream-note {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <header class="header">
+      <div class="header-left">
+        <div>統合AI（ローカル）</div>
+        <div>状態：<span id="status">待機中</span></div>
+        <div>親密度：<span id="affinityValue">0</span> / 1000　口調：<span id="toneValue">normal</span></div>
+      </div>
+
+      <div class="header-right">
+        <button onclick="toggleEditMode()">編集</button>
+        <button onclick="toggleSettings()">⚙</button>
+      </div>
+    </header>
+
+    <!-- ▼GUI編集パネル -->
+    <div id="editPanel" class="edit-panel">
+      <div class="edit-row">
+        <label>全体幅: <span id="appWidthValue"></span></label>
+        <input type="range" id="appWidth" min="700" max="1600" step="20">
+      </div>
+
+      <div class="edit-row">
+        <label>サイドバー幅: <span id="sidebarWidthValue"></span></label>
+        <input type="range" id="sidebarWidthEdit" min="120" max="600" step="10">
+      </div>
+
+      <div class="edit-row">
+        <label>文字サイズ: <span id="chatFontSizeValue"></span></label>
+        <input type="range" id="chatFontSize" min="12" max="22" step="1">
+      </div>
+
+      <div class="edit-row">
+        <label>メッセージ幅: <span id="messageMaxWidthValue"></span></label>
+        <input type="range" id="messageMaxWidth" min="40" max="95" step="5">
+      </div>
+
+      <div class="edit-row">
+        <label>入力欄高さ: <span id="inputHeightValue"></span></label>
+        <input type="range" id="inputHeight" min="40" max="160" step="10">
+      </div>
+
+      <div class="edit-row">
+        <label>ボタン文字サイズ: <span id="buttonFontSizeValue"></span></label>
+        <input type="range" id="buttonFontSize" min="12" max="20" step="1">
+      </div>
+
+      <button onclick="resetGuiLayout()">初期化</button>
+    </div>
+
+    <!-- ▼設定パネル -->
+    <div id="settingsPanel" style="
+      display:none;
+      position:absolute;
+      top:50px;
+      right:20px;
+      background:white;
+      border:1px solid #ccc;
+      border-radius:10px;
+      padding:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.1);
+      z-index:1000;
+    ">
+
+      <div style="margin-bottom:8px;">
+        <button onclick="resetMemory()">記憶のリセット</button>
+      </div>
+
+      <div>
+        <label>
+          <input type="checkbox" id="voiceToggle" checked onchange="toggleVoiceFromUI()">
+          音声出力
+        </label>
+      </div>
+
+      <div>
+        <label>話者</label>
+        <select id="speaker">
+          <option value="1">ずんだもん</option>
+          <option value="3">四国めたん</option>
+          <option value="8">春日部つむぎ</option>
+        </select>
+      </div>
+
+      <div>
+        <label>速さ: <span id="speedValue">1.0</span></label>
+        <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0">
+      </div>
+
+      <div>
+        <label>抑揚: <span id="intonationValue">1.0</span></label>
+        <input type="range" id="intonation" min="0.5" max="2.0" step="0.1" value="1.0">
+      </div>
+
+    </div>
+
+    <div class="layout" id="layout">
+
+      <div class="sidebar" id="sidebar">
+        <button onclick="newChat()">＋ 新規チャット</button>
+        <div id="chatList"></div>
+      </div>
+
+      <div class="resizer" id="resizer" title="ドラッグして幅変更"></div>
+
+      <div class="main" id="main">
+        <div id="summaryBox" class="summary hidden">
+          <div class="summary-title">これまでの要約</div>
+          <div id="summaryText"></div>
+        </div>
+
+        <div id="chat" class="chat"></div>
+
+        <div class="input-area">
+          <textarea id="question" rows="2" placeholder="メッセージを入力"></textarea>
+
+          <button onclick="toggleMic()" id="micBtn">🎤</button>
+          <button id="sendBtn" onclick="send()">送信</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+<script>
+let sessionId = "";
+let voiceEnabled = true;
+let thinkingDiv = null;
+let chats = [];
+
+let abortController = null;
+let isStreaming = false;
+let currentAiDiv = null;
+
+const GUI_LAYOUT_KEY = "integratedAiGuiLayout";
+
+const defaultGuiLayout = {
+  appWidth: 800,
+  sidebarWidth: 240,
+  chatFontSize: 14,
+  messageMaxWidth: 70,
+  inputHeight: 48,
+  buttonFontSize: 14
+};
+
+// ===== 音声入力 =====
+let recognition = null;
+let isRecording = false;
+
+/* ===== サーバ側で新規セッションを作成 ===== */
+async function createNewSession() {
+  const res = await fetch("/new_session", { method: "POST" });
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return { id: data.session_id, title: data.title || "新しいチャット" };
+}
+
+/* ===== DOM ===== */
+const chat = document.getElementById("chat");
+const chatList = document.getElementById("chatList");
+const textarea = document.getElementById("question");
+const sendBtn = document.getElementById("sendBtn");
+const summaryBox = document.getElementById("summaryBox");
+const summaryText = document.getElementById("summaryText");
+
+/* ===== ステータス ===== */
+function setStatus(text) {
+  const el = document.getElementById("status");
+  if (el) el.innerText = text;
+}
+
+function setSending(sending) {
+  isStreaming = sending;
+  if (sendBtn) {
+    sendBtn.disabled = false;
+    sendBtn.innerText = sending ? "停止" : "送信";
+  }
+  if (textarea) {
+    textarea.disabled = sending;
+  }
+}
+
+function scrollBottom() {
+  if (chat) {
+    chat.scrollTop = chat.scrollHeight;
+  }
+}
+
+/* ===== 音声入力 ===== */
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("このブラウザは音声認識に対応していません");
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "ja-JP";
+  recognition.interimResults = false;
+  recognition.continuous = false;
+
+  recognition.onresult = (event) => {
+    const text = event.results?.[0]?.[0]?.transcript || "";
+    const q = document.getElementById("question");
+    if (q) q.value = text;
+  };
+
+  recognition.onerror = (event) => {
+    console.error("音声入力エラー:", event.error);
+    alert("音声入力エラー: " + event.error);
+    isRecording = false;
+
+    const btn = document.getElementById("micBtn");
+    if (btn) btn.innerText = "🎤";
+  };
+
+  recognition.onend = () => {
+    isRecording = false;
+    const btn = document.getElementById("micBtn");
+    if (btn) btn.innerText = "🎤";
+  };
+}
+
+function toggleMic() {
+  if (!recognition) initSpeech();
+  if (!recognition) return;
+
+  const btn = document.getElementById("micBtn");
+
+  if (isRecording) {
+    recognition.stop();
+    isRecording = false;
+    if (btn) btn.innerText = "🎤";
+  } else {
+    recognition.start();
+    isRecording = true;
+    if (btn) btn.innerText = "■";
+  }
+}
+
+/* ===== 最小Markdown ===== */
+function escapeHTML(s) {
+  return (s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderMinimalMarkdown(text) {
+  const src = text || "";
+  let out = "";
+  let i = 0;
+
+  while (i < src.length) {
+    if (src.startsWith("```", i)) {
+      const langEnd = src.indexOf("\n", i + 3);
+      const fenceEnd = src.indexOf("```", langEnd === -1 ? i + 3 : langEnd + 1);
+      if (fenceEnd === -1) {
+        out += escapeHTML(src.slice(i));
+        break;
+      }
+      const codeStart = (langEnd === -1) ? (i + 3) : (langEnd + 1);
+      const code = src.slice(codeStart, fenceEnd);
+      out += `<pre><code>${escapeHTML(code)}</code></pre>`;
+      i = fenceEnd + 3;
+      continue;
+    }
+
+    if (src[i] === "`") {
+      const j = src.indexOf("`", i + 1);
+      if (j !== -1) {
+        const code = src.slice(i + 1, j);
+        out += `<span class="inline-code">${escapeHTML(code)}</span>`;
+        i = j + 1;
+        continue;
+      }
+    }
+
+    out += escapeHTML(src[i]);
+    i += 1;
+  }
+
+  out = out.replace(/\n/g, "<br>");
+  return out;
+}
+
+function addMessage(text, role) {
+  const div = document.createElement("div");
+  div.className = `message ${role === "user" ? "user" : "ai"}`;
+  div.innerHTML = renderMinimalMarkdown(text);
+  chat.appendChild(div);
+  scrollBottom();
+}
+
+/* ===== フィードバック ===== */
+function attachFeedbackUI(aiDiv, userText, modelName) {
+  if (aiDiv.dataset.feedbackAttached === "1") return;
+  aiDiv.dataset.feedbackAttached = "1";
+
+  const wrap = document.createElement("div");
+  wrap.className = "feedback";
+
+  const up = document.createElement("button");
+  up.type = "button";
+  up.innerText = "👍";
+
+  const down = document.createElement("button");
+  down.type = "button";
+  down.innerText = "👎";
+
+  async function sendFeedback(rating, reason = "") {
+    try {
+      up.disabled = true;
+      down.disabled = true;
+
+      const contentDiv = aiDiv.querySelector(".ai-content");
+      const assistantText = contentDiv ? contentDiv.innerText : "";
+
+      const payload = {
+        session_id: sessionId,
+        user_text: userText || "",
+        assistant_text: assistantText,
+        rating: rating,
+        model: modelName || null,
+        reason: reason
+      };
+
+      const res = await fetch("/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+    } catch (e) {
+      console.warn("feedback failed:", e);
+      up.disabled = false;
+      down.disabled = false;
+      alert("フィードバック送信に失敗しました");
+    }
+  }
+
+  up.onclick = () => sendFeedback("good");
+  down.onclick = async () => {
+    const reason = prompt("どこが良くなかったですか？（任意）") || "";
+    await sendFeedback("bad", reason);
+  };
+
+  wrap.appendChild(up);
+  wrap.appendChild(down);
+
+  const mic = document.createElement("button");
+  mic.type = "button";
+  mic.innerText = "🎤";
+  mic.onclick = () => {
+    const contentDiv = aiDiv.querySelector(".ai-content");
+    const text = contentDiv ? contentDiv.innerText : "";
+    if (text) speak(text);
+  };
+  wrap.appendChild(mic);
+
+  aiDiv.appendChild(wrap);
+}
+
+/* ===== 思考中 ===== */
+function showThinking() {
+  thinkingDiv = document.createElement("div");
+  thinkingDiv.className = "message ai";
+  thinkingDiv.innerText = "…考え中";
+  chat.appendChild(thinkingDiv);
+  scrollBottom();
+}
+
+function hideThinking() {
+  if (thinkingDiv) thinkingDiv.remove();
+  thinkingDiv = null;
+}
+
+/* ===== 要約 ===== */
+function updateSummary(summary) {
+  const s = (summary || "").trim();
+  if (!s) {
+    if (summaryBox) summaryBox.classList.add("hidden");
+    if (summaryText) summaryText.innerText = "";
+    return;
+  }
+  if (summaryBox) summaryBox.classList.remove("hidden");
+  if (summaryText) summaryText.innerText = s;
+}
+
+/* ===== 人格状態表示 ===== */
+function updatePersonalityView(personality) {
+  const affinityEl = document.getElementById("affinityValue");
+  const toneEl = document.getElementById("toneValue");
+
+  const p = personality || {};
+  const affinity = Number.isFinite(Number(p.affinity)) ? Number(p.affinity) : 0;
+  const tone = p.tone || "normal";
+
+  if (affinityEl) affinityEl.innerText = String(affinity);
+  if (toneEl) toneEl.innerText = tone;
+}
+
+/* ===== 停止注記 ===== */
+function markStopped(aiDiv) {
+  if (!aiDiv) return;
+  if (aiDiv.querySelector(".stream-note")) return;
+
+  const note = document.createElement("div");
+  note.className = "stream-note";
+  note.innerText = "（停止しました：この途中結果は履歴に保存されません）";
+  aiDiv.appendChild(note);
+}
+
+/* ===== サーバの sessions を再同期 ===== */
+async function syncSessionsFromServer() {
+  try {
+    const res = await fetch("/sessions");
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!data.sessions || !Array.isArray(data.sessions)) return;
+
+    const serverList = data.sessions.map(s => ({
+      id: s.id,
+      title: s.title || "新しいチャット",
+      titleGenerated: true
+    }));
+
+    chats = serverList;
+
+    if (!chats.some(c => c.id === sessionId) && chats.length > 0) {
+      sessionId = chats[0].id;
+      await loadHistory(sessionId);
+    }
+
+    renderChatList();
+  } catch (e) {
+    console.warn("syncSessionsFromServer failed:", e);
+  }
+}
+
+/* ===== ストリーム描画を間引く ===== */
+function createStreamRenderer(contentDiv, getTextFn) {
+  const MIN_INTERVAL_MS = 50;
+
+  let scheduled = false;
+  let lastPaint = 0;
+  let rafId = 0;
+
+  function paint(force = false) {
+    if (!contentDiv) return;
+
+    const now = performance.now();
+    if (!force && (now - lastPaint) < MIN_INTERVAL_MS) {
+      scheduled = false;
+      schedule();
+      return;
+    }
+
+    lastPaint = now;
+    scheduled = false;
+
+    const text = getTextFn();
+    contentDiv.innerHTML = renderMinimalMarkdown(text);
+  }
+
+  function schedule(force = false) {
+    if (scheduled) return;
+    scheduled = true;
+    rafId = requestAnimationFrame(() => paint(force));
+  }
+
+  function cancel() {
+    try { cancelAnimationFrame(rafId); } catch {}
+    scheduled = false;
+  }
+
+  return { schedule, paint, cancel };
+}
+
+/* ===== 送信 ===== */
+async function send() {
+  if (isStreaming && abortController) {
+    abortController.abort();
+    setStatus("停止しました");
+    setSending(false);
+    hideThinking();
+    markStopped(currentAiDiv);
+    return;
+  }
+
+  const q = textarea.value.trim();
+  if (!q) return;
+
+  textarea.value = "";
+  addMessage(q, "user");
+
+  setStatus("送信中…");
+  setSending(true);
+  showThinking();
+
+  try {
+    abortController = new AbortController();
+
+    const res = await fetch("/ask_stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ q, session_id: sessionId }),
+      signal: abortController.signal
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+
+    hideThinking();
+
+    const aiDiv = document.createElement("div");
+    aiDiv.className = "message ai";
+    aiDiv.dataset.userText = q;
+
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "ai-content";
+    contentDiv.innerHTML = "";
+    aiDiv.appendChild(contentDiv);
+
+    chat.appendChild(aiDiv);
+    scrollBottom();
+
+    currentAiDiv = aiDiv;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let rawText = "";
+
+    const renderer = createStreamRenderer(contentDiv, () => rawText);
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+
+      for (const chunk of parts) {
+        const line = chunk.trim();
+        if (!line.startsWith("data:")) continue;
+
+        const dataStr = line.replace(/^data:\s*/, "");
+
+        if (dataStr === "[DONE]") {
+          renderer.paint(true);
+
+          attachFeedbackUI(
+            aiDiv,
+            aiDiv.dataset.userText || "",
+            aiDiv.dataset.model || null
+          );
+
+          abortController = null;
+          setStatus("待機中");
+          setSending(false);
+          scrollBottom();
+
+          currentAiDiv = null;
+
+          if (voiceEnabled && rawText) {
+            const speechText = makeSpeechText(rawText);
+            if (speechText) speak(speechText);
+          }
+
+          await syncSessionsFromServer();
+          return;
+        }
+
+        let payload;
+        try {
+          payload = JSON.parse(dataStr);
+        } catch {
+          continue;
+        }
+
+        if (payload.type === "delta") {
+          rawText += payload.text || "";
+          renderer.schedule(false);
+          scrollBottom();
+
+        } else if (payload.type === "replace") {
+          if (typeof payload.text === "string") {
+            rawText = payload.text;
+            renderer.paint(true);
+            scrollBottom();
+          }
+
+        } else if (payload.type === "meta") {
+          if (payload.model) {
+            aiDiv.dataset.model = payload.model;
+          }
+
+          if (payload.personality) {
+            updatePersonalityView(payload.personality);
+          }
+
+          if (payload.title) {
+            const c = chats.find(x => x.id === sessionId);
+            if (c) {
+              c.title = payload.title;
+              c.titleGenerated = true;
+              renderChatList();
+            }
+          }
+
+        } else if (payload.type === "error") {
+          rawText += `\n⚠ エラー: ${payload.message}`;
+          renderer.paint(true);
+          setStatus("エラー");
+        }
+      }
+    }
+
+    renderer.paint(true);
+    setStatus("待機中");
+
+  } catch (e) {
+    hideThinking();
+
+    if (e.name === "AbortError") {
+      setStatus("停止しました");
+      markStopped(currentAiDiv);
+    } else {
+      addMessage(`⚠ エラー: ${e.message}`, "ai");
+      setStatus("エラー");
+    }
+
+  } finally {
+    abortController = null;
+    setSending(false);
+    currentAiDiv = null;
+  }
+}
+
+/* ===== Enter送信 ===== */
+textarea.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+});
+
+/* ===== 記憶リセット ===== */
+async function resetMemory() {
+  try {
+    setStatus("リセット中…");
+    await fetch("/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+
+    chat.innerHTML = "";
+    updateSummary("");
+
+    await syncSessionsFromServer();
+
+    if (!chats || chats.length === 0) {
+      const s = await createNewSession();
+      sessionId = s.id;
+      chats = [{
+        id: sessionId,
+        title: s.title,
+        titleGenerated: false
+      }];
+      renderChatList();
+      setStatus("新しいチャット");
+      return;
+    }
+
+    sessionId = chats[0].id;
+    await loadHistory(sessionId);
+    renderChatList();
+    setStatus("待機中");
+
+  } catch (e) {
+    console.warn("resetMemory failed:", e);
+    setStatus("エラー");
+  }
+}
+
+async function deleteChat(id) {
+  const ok = confirm("このチャットを削除しますか？");
+  if (!ok) return;
+
+  try {
+    setStatus("削除中…");
+
+    const res = await fetch("/delete_session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: id })
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    await syncSessionsFromServer();
+
+    if (chats.length > 0) {
+      if (!chats.some(c => c.id === sessionId)) {
+        sessionId = chats[0].id;
+        setStatus("履歴読込中…");
+        await loadHistory(sessionId);
+        setStatus("待機中");
+      }
+    } else {
+      const s = await createNewSession();
+      sessionId = s.id;
+      chats = [{
+        id: sessionId,
+        title: s.title,
+        titleGenerated: false
+      }];
+      chat.innerHTML = "";
+      updateSummary("");
+      renderChatList();
+      setStatus("新しいチャット");
+    }
+
+  } catch (e) {
+    console.warn("deleteChat failed:", e);
+    alert("削除に失敗しました");
+    setStatus("エラー");
+  }
+}
+
+/* ===== 新規チャット ===== */
+async function newChat() {
+  try {
+    setStatus("新規作成中…");
+
+    const s = await createNewSession();
+    sessionId = s.id;
+
+    chat.innerHTML = "";
+    updateSummary("");
+
+    await syncSessionsFromServer();
+
+    if (chats.some(c => c.id === sessionId)) {
+      // ok
+    } else {
+      chats.unshift({ id: sessionId, title: s.title, titleGenerated: false });
+    }
+
+    renderChatList();
+    setStatus("新しいチャット");
+  } catch (e) {
+    console.warn("newChat failed:", e);
+    setStatus("エラー");
+  }
+}
+
+/* ===== 一覧描画 ===== */
+function renderChatList() {
+  chatList.innerHTML = "";
+  chats.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "chat-item" + (c.id === sessionId ? " active" : "");
+    row.onclick = () => switchChat(c.id);
+
+    const title = document.createElement("div");
+    title.className = "chat-title";
+    title.innerText = c.title;
+
+    const del = document.createElement("button");
+    del.className = "chat-del";
+    del.type = "button";
+    del.innerText = "🗑";
+    del.title = "削除";
+
+    del.onclick = (e) => {
+      e.stopPropagation();
+      deleteChat(c.id);
+    };
+
+    row.appendChild(title);
+    row.appendChild(del);
+    chatList.appendChild(row);
+  });
+}
+
+async function loadHistory(id) {
+  const res = await fetch(`/history?session_id=${id}`);
+  const data = await res.json();
+
+  chat.innerHTML = "";
+  updateSummary(data.summary);
+  updatePersonalityView(data.personality);
+
+  data.messages.forEach(m => addMessage(m.content, m.role));
+}
+
+async function switchChat(id) {
+  sessionId = id;
+  setStatus("履歴読込中…");
+  await loadHistory(id);
+  setStatus("待機中");
+  renderChatList();
+}
+
+/* ===== 初期化 ===== */
+async function initChats() {
+  await syncSessionsFromServer();
+  if (chats.length > 0) {
+    sessionId = chats[0].id;
+    renderChatList();
+    setStatus("履歴読込中…");
+    await loadHistory(sessionId);
+    setStatus("待機中");
+    renderChatList();
+    return;
+  }
+
+  const s = await createNewSession();
+  sessionId = s.id;
+  chats = [{ id: sessionId, title: s.title, titleGenerated: false }];
+  renderChatList();
+  setStatus("新しいチャット");
+}
+
+function toggleSettings() {
+  const panel = document.getElementById("settingsPanel");
+  if (!panel) return;
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+
+function loadGuiLayout() {
+  try {
+    const raw = localStorage.getItem(GUI_LAYOUT_KEY);
+    if (!raw) return { ...defaultGuiLayout };
+
+    const parsed = JSON.parse(raw);
+    return { ...defaultGuiLayout, ...parsed };
+  } catch {
+    return { ...defaultGuiLayout };
+  }
+}
+
+function saveGuiLayout(layout) {
+  localStorage.setItem(GUI_LAYOUT_KEY, JSON.stringify(layout));
+}
+
+function applyGuiLayout(layout) {
+  const root = document.documentElement;
+
+  root.style.setProperty("--app-width", `${layout.appWidth}px`);
+  root.style.setProperty("--sidebar-width", `${layout.sidebarWidth}px`);
+  root.style.setProperty("--chat-font-size", `${layout.chatFontSize}px`);
+  root.style.setProperty("--message-max-width", `${layout.messageMaxWidth}%`);
+  root.style.setProperty("--input-height", `${layout.inputHeight}px`);
+  root.style.setProperty("--button-font-size", `${layout.buttonFontSize}px`);
+
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar) {
+    sidebar.style.flex = `0 0 ${layout.sidebarWidth}px`;
+  }
+}
+
+function updateEditPanelValues(layout) {
+  const map = {
+    appWidth: "px",
+    sidebarWidth: "px",
+    chatFontSize: "px",
+    messageMaxWidth: "%",
+    inputHeight: "px",
+    buttonFontSize: "px"
+  };
+
+  for (const key of Object.keys(map)) {
+    const input = document.getElementById(key === "sidebarWidth" ? "sidebarWidthEdit" : key);
+    const label = document.getElementById(`${key}Value`);
+
+    if (input) input.value = layout[key];
+    if (label) label.innerText = `${layout[key]}${map[key]}`;
+  }
+}
+
+function bindGuiEditor() {
+  let layout = loadGuiLayout();
+  applyGuiLayout(layout);
+  updateEditPanelValues(layout);
+
+  const bindings = [
+    ["appWidth", "appWidth"],
+    ["sidebarWidthEdit", "sidebarWidth"],
+    ["chatFontSize", "chatFontSize"],
+    ["messageMaxWidth", "messageMaxWidth"],
+    ["inputHeight", "inputHeight"],
+    ["buttonFontSize", "buttonFontSize"],
+  ];
+
+  for (const [inputId, key] of bindings) {
+    const input = document.getElementById(inputId);
+    if (!input) continue;
+
+    input.addEventListener("input", () => {
+      layout[key] = Number(input.value);
+      applyGuiLayout(layout);
+      updateEditPanelValues(layout);
+      saveGuiLayout(layout);
+    });
+  }
+}
+
+function toggleEditMode() {
+  const panel = document.getElementById("editPanel");
+  if (!panel) return;
+  panel.classList.toggle("active");
+}
+
+function resetGuiLayout() {
+  const layout = { ...defaultGuiLayout };
+  saveGuiLayout(layout);
+  applyGuiLayout(layout);
+  updateEditPanelValues(layout);
+}
+
+function toggleVoiceFromUI() {
+  const checkbox = document.getElementById("voiceToggle");
+  if (!checkbox) return;
+  voiceEnabled = checkbox.checked;
+}
+
+/* ===== スライダー表示更新 ===== */
+function initVoiceUI() {
+  const speed = document.getElementById("speed");
+  const intonation = document.getElementById("intonation");
+  const speedVal = document.getElementById("speedValue");
+  const intonationVal = document.getElementById("intonationValue");
+
+  if (!speed || !intonation || !speedVal || !intonationVal) return;
+
+  function update() {
+    speedVal.innerText = Number(speed.value).toFixed(1);
+    intonationVal.innerText = Number(intonation.value).toFixed(1);
+  }
+
+  speed.addEventListener("input", update);
+  intonation.addEventListener("input", update);
+
+  update();
+}
+
+/* ===== 音声出力 ===== */
+function makeSpeechText(text) {
+  let t = text || "";
+
+  // コードブロックは読み上げない
+  t = t.replace(/```[\s\S]*?```/g, "");
+
+  // インラインコードも軽く除去
+  t = t.replace(/`[^`]*`/g, "");
+
+  // 長すぎる場合は冒頭だけ
+  t = t.split("。").slice(0, 2).join("。").trim();
+
+  return t;
+}
+
+/* ===== 音声出力 ===== */
+async function speak(text) {
+  if (!voiceEnabled) return;
+
+  const speakerEl = document.getElementById("speaker");
+  const speedEl = document.getElementById("speed");
+  const intonationEl = document.getElementById("intonation");
+
+  const speaker = speakerEl ? parseInt(speakerEl.value, 10) : 1;
+  const speed = speedEl ? parseFloat(speedEl.value) : 1.0;
+  const intonation = intonationEl ? parseFloat(intonationEl.value) : 1.0;
+
+  try {
+    const res = await fetch("/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        speaker,
+        speed,
+        intonation
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    const audio = new Audio(url);
+    audio.onended = () => URL.revokeObjectURL(url);
+    await audio.play();
+  } catch (e) {
+    console.error("音声再生エラー:", e);
+  }
+}
+
+/* ===== 起動 ===== */
+initChats();
+initVoiceUI();
+bindGuiEditor();
+
+/* ===== サイドバー幅リサイズ ===== */
+(() => {
+  const layout = document.getElementById("layout");
+  const sidebar = document.getElementById("sidebar");
+  const resizer = document.getElementById("resizer");
+  if (!layout || !sidebar || !resizer) return;
+
+  const MIN = 160;
+  const MAIN_MIN = 240;
+  const KEY = "sidebarWidth";
+
+  let dragging = false;
+
+  function setDragging(on) {
+    dragging = on;
+    document.body.classList.toggle("dragging-col", on);
+  }
+
+  function clampWidth(clientX) {
+    const rect = layout.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const max = rect.width - MAIN_MIN;
+    return Math.max(MIN, Math.min(x, max));
+  }
+
+  function applyWidthPx(w) {
+    sidebar.style.flex = `0 0 ${w}px`;
+
+    const layout = loadGuiLayout();
+    layout.sidebarWidth = Math.round(w);
+    saveGuiLayout(layout);
+    applyGuiLayout(layout);
+    updateEditPanelValues(layout);
+  }
+
+  function saveWidth(w) {
+    try { localStorage.setItem(KEY, String(w)); } catch {}
+  }
+
+  function loadWidth() {
+    try {
+      const v = localStorage.getItem(KEY);
+      if (!v) return null;
+      const n = parseInt(v, 10);
+      if (Number.isFinite(n) && n > 0) return n;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  const saved = loadWidth();
+  if (saved !== null) {
+    requestAnimationFrame(() => {
+      const rect = layout.getBoundingClientRect();
+      const max = rect.width - MAIN_MIN;
+      const w = Math.max(MIN, Math.min(saved, max));
+      applyWidthPx(w);
+    });
+  }
+
+  resizer.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    setDragging(true);
+    resizer.setPointerCapture(e.pointerId);
+
+    const w = clampWidth(e.clientX);
+    applyWidthPx(w);
+
+    e.preventDefault();
+  });
+
+  resizer.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const w = clampWidth(e.clientX);
+    applyWidthPx(w);
+    e.preventDefault();
+  });
+
+  resizer.addEventListener("pointerup", (e) => {
+    if (!dragging) return;
+    setDragging(false);
+
+    const w = clampWidth(e.clientX);
+    applyWidthPx(w);
+    saveWidth(w);
+
+    try { resizer.releasePointerCapture(e.pointerId); } catch {}
+    e.preventDefault();
+  });
+
+  resizer.addEventListener("pointercancel", () => {
+    if (!dragging) return;
+    setDragging(false);
+  });
+
+  window.addEventListener("resize", () => {
+    const rect = layout.getBoundingClientRect();
+    const current = sidebar.getBoundingClientRect().width;
+    const max = rect.width - MAIN_MIN;
+    const w = Math.max(MIN, Math.min(current, max));
+    applyWidthPx(w);
+  });
+})();
+</script></body>
+</html>
