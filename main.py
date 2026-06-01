@@ -3,6 +3,11 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from prompts import build_messages
+from personality.state_manager import _ensure_personality
+from personality.attitude_analysis import analyze_attitude
+from personality.affinity import update_affinity
+from personality.mood import update_mood
+from personality.personality_prompt import build_personality_text
 
 import json
 import traceback
@@ -30,6 +35,13 @@ from memory_store import (
     delete_memory,
 )
 
+from personality.state_manager import _ensure_personality
+from personality.affinity import update_personality
+from personality.personality_prompt import build_personality_prompt
+from personality.attitude_analysis import (
+    analyze_user_intent_llm,
+    schedule_personality_analysis,
+)
 
 # ===== FastAPI App =====
 app = FastAPI()
@@ -120,268 +132,6 @@ FORMAT_SYSTEM = load_text_file(resource_path("prompts/format_system.txt"), defau
 TITLE_SYSTEM = load_text_file(resource_path("prompts/title_system.txt"), default="")
 SUMMARIZE_SYSTEM = load_text_file(resource_path("prompts/summarize_system.txt"), default="")
 GOOD_EXAMPLES_SYSTEM = load_text_file(resource_path("prompts/good_examples_system.txt"), default="")
-
-# =========================================================
-# 人格変化 helper
-# =========================================================
-def _init_personality():
-    return {
-        "affinity": 0,
-        "tone": "normal",
-        "turn_count": 0,
-    }
-
-
-def _ensure_personality(session: dict) -> dict:
-    p = session.setdefault("personality", _init_personality())
-
-    if "affinity" not in p:
-        p["affinity"] = 0
-    if "tone" not in p:
-        p["tone"] = "normal"
-    if "turn_count" not in p:
-        p["turn_count"] = 0
-
-    return p
-
-
-def update_personality(session: dict, user_text: str):
-    p = _ensure_personality(session)
-
-    text = user_text or ""
-    p["turn_count"] += 1
-
-    # 基本：会話するだけで少し親密度上昇
-    p["affinity"] += 1
-
-    # 長めの相談・説明依頼は関係性が進んだとみなす
-    if len(text) >= 40:
-        p["affinity"] += 1
-
-    p["affinity"] = max(0, min(1000, int(p["affinity"])))
-
-    if p["affinity"] < 100:
-        p["tone"] = "normal"
-    elif p["affinity"] < 300:
-        p["tone"] = "friendly"
-    else:
-        p["tone"] = "close"
-
-def build_personality_prompt(session: dict, memories_text: str = "") -> str:
-    p = _ensure_personality(session)
-
-    affinity = int(p.get("affinity", 0))
-    tone = p.get("tone", "normal")
-    turn_count = int(p.get("turn_count", 0))
-
-    memory_reaction = ""
-    if "【話題ごとの人格反応】" in (memories_text or ""):
-        memory_reaction = """\
-
-【記憶連動ルール】
-- 関連する長期記憶がある話題では、初対面のように扱わない。
-- 過去に継続して扱った話題では、関係性の蓄積がある前提で自然に応答する。
-- ユーザーの好み・方針・作業傾向が記憶にある場合は、それを反映する。
-- ただし、記憶内容を毎回そのまま説明しない。
-- 「覚えています」などを不自然に多用しない。
-"""
-
-    return f"""\
-【現在の人格状態】
-- 会話回数: {turn_count}
-- 親密度: {affinity}
-- 口調レベル: {tone}
-
-【人格変化ルール】
-- normal: 丁寧で簡潔。距離感はやや控えめ。
-- friendly: 丁寧さを維持しつつ、少し柔らかく親しみのある表現にする。
-- close: 丁寧さは維持しつつ、自然で少しフランクな表現にする。
-{memory_reaction}
-
-【制限】
-- 口調を変えすぎない。
-- 絵文字は使わない。
-- ユーザーに媚びすぎない。
-- 内容の正確性を口調より優先する。
-"""
-# =========================================================
-# LLM態度判定 helper（応答後に非同期実行）
-# =========================================================
-INTENT_OPTIONS = {
-    "temperature": 0.1,
-    "top_p": 0.8,
-    "num_predict": 220,
-}
-
-
-def _extract_json_object(text: str) -> dict:
-    raw = (text or "").strip()
-    if not raw:
-        return {}
-
-    try:
-        obj = json.loads(raw)
-        return obj if isinstance(obj, dict) else {}
-    except Exception:
-        pass
-
-    start = raw.find("{")
-    end = raw.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        return {}
-
-    try:
-        obj = json.loads(raw[start:end + 1])
-        return obj if isinstance(obj, dict) else {}
-    except Exception:
-        return {}
-
-def analyze_user_intent_llm(user_text: str) -> dict:
-    text = (user_text or "").strip()
-    if not text:
-        return {
-            "sentiment": "neutral",
-            "trust": "normal",
-            "correction": False,
-            "memory_intent": False,
-            "model_need": "fast",
-        }
-
-    prompt = [
-        {
-            "role": "system",
-            "content": """\
-あなたはユーザー発言の意味判定器です。
-単語一致ではなく、発言の意図を分析し、JSONのみ返してください。
-
-必ず次の形式だけで返してください。
-{
-  "sentiment": "positive" | "neutral" | "negative",
-  "trust": "high" | "normal" | "low",
-  "correction": true | false,
-  "memory_intent": true | false,
-  "model_need": "fast" | "smart"
-}
-
-判定基準:
-- sentiment:
-  - 感謝、好意、協力的、信頼、継続依頼は positive
-  - 普通の質問、説明依頼、作業指示は neutral
-  - 不満、苛立ち、強い否定、失望は negative
-- correction:
-  - 回答やコードの修正要求なら true
-- memory_intent:
-  - ユーザーが今後も残したい情報、設定、好み、呼び方、方針を述べているなら true
-  - 「覚えて」という単語がなくても、継続的に使うべき情報なら true
-  - 一時的な質問や雑談だけなら false
-- model_need:
-  - コード、設計、デバッグ、複雑な比較、長い手順、原因分析なら smart
-  - 雑談、短い質問、簡単な説明なら fast
-- JSON以外は出力しない
-"""
-        },
-        {
-            "role": "user",
-            "content": text
-        }
-    ]
-
-    try:
-        raw = call_ollama_chat(
-            prompt,
-            FAST_MODEL,
-            options=INTENT_OPTIONS,
-            timeout=90,
-        )
-        data = _extract_json_object(raw)
-
-        sentiment = data.get("sentiment")
-        trust = data.get("trust")
-        correction = data.get("correction")
-        memory_intent = data.get("memory_intent")
-        model_need = data.get("model_need")
-
-        if sentiment not in ("positive", "neutral", "negative"):
-            sentiment = "neutral"
-        if trust not in ("high", "normal", "low"):
-            trust = "normal"
-        if not isinstance(correction, bool):
-            correction = False
-        if not isinstance(memory_intent, bool):
-            memory_intent = False
-        if model_need not in ("fast", "smart"):
-            model_need = "fast"
-
-        return {
-            "sentiment": sentiment,
-            "trust": trust,
-            "correction": correction,
-            "memory_intent": memory_intent,
-            "model_need": model_need,
-        }
-
-    except Exception as e:
-        print("analyze_user_intent_llm error:", e)
-        return {
-            "sentiment": "neutral",
-            "trust": "normal",
-            "correction": False,
-            "memory_intent": False,
-            "model_need": "fast",
-        }
-
-
-def apply_attitude_to_personality(session: dict, attitude: dict):
-    p = _ensure_personality(session)
-
-    sentiment = attitude.get("sentiment", "neutral")
-    trust = attitude.get("trust", "normal")
-    correction = attitude.get("correction", False)
-
-    delta = 0
-
-    if sentiment == "positive":
-        delta += 10
-    elif sentiment == "negative":
-        delta -= 10
-
-    if trust == "high":
-        delta += 1
-    elif trust == "low":
-        delta -= 1
-
-    p["affinity"] = max(0, min(100, int(p.get("affinity", 0)) + delta))
-
-    if p["affinity"] < 10:
-        p["tone"] = "normal"
-    elif p["affinity"] < 30:
-        p["tone"] = "friendly"
-    else:
-        p["tone"] = "close"
-
-    p["last_attitude"] = attitude
-    p["last_attitude_at"] = time.time()
-
-
-def schedule_personality_analysis(session_id: str, user_text: str, intent: dict | None = None):
-    def worker():
-        try:
-            session = sessions.get(session_id)
-            if not session:
-                return
-
-            attitude = intent if isinstance(intent, dict) else analyze_user_intent_llm(user_text)
-
-            with sessions_lock:
-                apply_attitude_to_personality(session, attitude)
-                save_sessions_to_file(dict(sessions))
-
-            print("[intent]", session_id, attitude, _ensure_personality(session))
-
-        except Exception as e:
-            print("schedule_personality_analysis worker error:", e)
-
-    Thread(target=worker, daemon=True).start()
 
 # =========================================================
 # ルータ / 整形 / 要約
@@ -953,10 +703,11 @@ def ask(req: AskRequest):
 
         memories_text = build_long_term_memory_prompt(q, model=model)
         messages = build_messages(
-            session=session,
-            user_text=q,
-            rules_text=RULES,
+            user_text=user_text,
+            history=history,
             memories_text=memories_text,
+            summary_text=summary_text,
+            personality_text=personality_text,
         )
 
         personality_text = build_personality_prompt(session, memories_text)
@@ -1050,6 +801,10 @@ def ask_stream(req: AskRequest):
         rules_text=RULES,
         memories_text=memories_text,
     )
+
+    personality_text = build_personality_prompt(session, memories_text)
+    if personality_text.strip():
+        messages.insert(1, {"role": "system", "content": personality_text})
 
     if STYLE.strip():
         messages.insert(0, {"role": "system", "content": STYLE})

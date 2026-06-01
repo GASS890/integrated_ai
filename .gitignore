@@ -20,8 +20,6 @@ VOICEVOX/
 __pycache__/
 
 # Backups / old copies
-変更前置き場/
-*コピー*.py
 
 build/
 dist/
@@ -39,6 +37,3 @@ eval_results.jsonl
 workspace/
 VOICEVOX/
 __pycache__/
-
-変更前置き場/
-*コピー*.py

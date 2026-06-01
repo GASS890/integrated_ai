@@ -8,52 +8,31 @@ SAFETY_SYSTEM = """\
 """
 
 def build_messages(
-    session: dict,
-    user_text: str,
-    rules_text: str = "",
-    memories_text: str = "",
-) -> list:
-    """
-    system 構成:
-    - SAFETY_SYSTEM
-    - rules_text
-    - memories_text（長期記憶）
-    - summary（短期要約）
-    - recent messages
-    - current user
-    """
-    rules = (rules_text or "").strip()
-    memories = (memories_text or "").strip()
+    user_text,
+    history,
+    memories_text="",
+    summary_text="",
+    personality_text="",
+):
+    messages = []
 
-    system_blocks = []
-    if SAFETY_SYSTEM.strip():
-        system_blocks.append(SAFETY_SYSTEM.strip())
-    if rules:
-        system_blocks.append(rules)
+    system_parts = []
 
-    system_content = "\n\n".join(system_blocks).strip()
-    messages = [{"role": "system", "content": system_content}] if system_content else []
+    if system_text:
+        system_parts.append(system_text)
 
-    if memories:
-        messages.append({
-            "role": "system",
-            "content": memories
-        })
+    if personality_text:
+        system_parts.append(personality_text)
 
-    summary = session.get("summary", "")
-    if isinstance(summary, str) and summary.strip():
-        messages.append({
-            "role": "system",
-            "content": "以下はこれまでの会話の要約です。\n" + summary.strip()
-        })
+    if memories_text:
+        system_parts.append(memories_text)
 
-    for m in session.get("messages", []):
-        role = m.get("role")
-        content = m.get("content")
-        if role in ("user", "assistant") and isinstance(content, str) and content.strip():
-            messages.append({"role": role, "content": content})
+    if summary_text:
+        system_parts.append(summary_text)
 
-    if isinstance(user_text, str) and user_text.strip():
-        messages.append({"role": "user", "content": user_text.strip()})
+    messages.append({
+        "role": "system",
+        "content": "\n\n".join(system_parts),
+    })
 
     return messages
