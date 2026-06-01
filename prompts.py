@@ -8,18 +8,19 @@ SAFETY_SYSTEM = """\
 """
 
 def build_messages(
-    user_text,
-    history,
-    memories_text="",
-    summary_text="",
-    personality_text="",
+    user_text: str,
+    history: list,
+    memories_text: str = "",
+    summary_text: str = "",
+    personality_text: str = "",
+    rules_text: str = "",
 ):
     messages = []
 
     system_parts = []
 
-    if system_text:
-        system_parts.append(system_text)
+    if rules_text:
+        system_parts.append(rules_text)
 
     if personality_text:
         system_parts.append(personality_text)
@@ -28,11 +29,27 @@ def build_messages(
         system_parts.append(memories_text)
 
     if summary_text:
-        system_parts.append(summary_text)
+        system_parts.append("【これまでの会話要約】\n" + summary_text)
+
+    if system_parts:
+        messages.append({
+            "role": "system",
+            "content": "\n\n".join(system_parts),
+        })
+
+    for m in history or []:
+        role = m.get("role")
+        content = m.get("content")
+
+        if role in ("user", "assistant") and content:
+            messages.append({
+                "role": role,
+                "content": content,
+            })
 
     messages.append({
-        "role": "system",
-        "content": "\n\n".join(system_parts),
+        "role": "user",
+        "content": user_text,
     })
 
     return messages

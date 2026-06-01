@@ -3,11 +3,6 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from prompts import build_messages
-from personality.state_manager import _ensure_personality
-from personality.attitude_analysis import analyze_attitude
-from personality.affinity import update_affinity
-from personality.mood import update_mood
-from personality.personality_prompt import build_personality_text
 
 import json
 import traceback
@@ -35,7 +30,10 @@ from memory_store import (
     delete_memory,
 )
 
-from personality.state_manager import _ensure_personality
+from personality.state_manager import (
+    _init_personality,
+    _ensure_personality,
+)
 from personality.affinity import update_personality
 from personality.personality_prompt import build_personality_prompt
 from personality.attitude_analysis import (
@@ -703,12 +701,12 @@ def ask(req: AskRequest):
 
         memories_text = build_long_term_memory_prompt(q, model=model)
         messages = build_messages(
-            user_text=user_text,
-            history=history,
+            user_text=q,
+            history=session.get("messages", []),
             memories_text=memories_text,
-            summary_text=summary_text,
-            personality_text=personality_text,
-        )
+            summary_text=session.get("summary", ""),
+            rules_text=RULES,
+        )        
 
         personality_text = build_personality_prompt(session, memories_text)
         if personality_text.strip():
@@ -796,10 +794,11 @@ def ask_stream(req: AskRequest):
 
     memories_text = build_long_term_memory_prompt(q, model=model)
     messages = build_messages(
-        session=session,
         user_text=q,
-        rules_text=RULES,
+        history=session.get("messages", []),
         memories_text=memories_text,
+        summary_text=session.get("summary", ""),
+        rules_text=RULES,
     )
 
     personality_text = build_personality_prompt(session, memories_text)
