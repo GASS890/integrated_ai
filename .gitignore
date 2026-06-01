@@ -36,4 +36,8 @@ eval_results.jsonl
 
 workspace/
 VOICEVOX/
+personality_state.json
+sessions.json
+feedback.jsonl
+memories.json
 __pycache__/
