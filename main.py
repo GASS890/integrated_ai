@@ -452,15 +452,20 @@ def try_file_operation(user_text: str):
 # sessions 永続化
 # =========================================================
 def _new_session():
-    return {
+    personality_id = "default"
+
+    session = {
         "title": "",
         "title_fixed": False,
         "summary": "",
         "messages": [],
         "created_at": time.time(),
-        "personality": _init_personality(),
+        "personality_id": personality_id,
     }
 
+    _ensure_personality(session)
+
+    return session
 
 def load_sessions_from_file() -> dict:
     if not os.path.exists(SESSIONS_FILE):
@@ -507,6 +512,7 @@ for sid, s in _loaded.items():
     if isinstance(s, dict) and "title_fixed" not in s:
         s["title_fixed"] = False
     if isinstance(s, dict):
+        s["personality_id"] = s.get("personality_id") or "default"
         _ensure_personality(s)
 
 sessions = defaultdict(_new_session, _loaded)
@@ -754,10 +760,15 @@ def ask(req: AskRequest):
 @app.post("/new_session")
 def new_session():
     sid = str(uuid.uuid4())
-    sessions[sid] = _new_session()
-    persist_sessions()
-    return {"session_id": sid, "title": "新しいチャット"}
+    session = _new_session()
+    session["personality_id"] = "default"
 
+    _ensure_personality(session)
+
+    sessions[sid] = session
+    persist_sessions()
+
+    return {"session_id": sid, "title": "新しいチャット"}
 
 @app.post("/ask_stream")
 def ask_stream(req: AskRequest):
@@ -911,8 +922,14 @@ def list_sessions():
 @app.get("/history")
 def get_history(session_id: str):
     session = sessions.get(session_id)
+
     if not session:
-        return {"summary": "", "messages": [], "personality": _init_personality()}
+        temp_session = {"personality_id": "default"}
+        return {
+            "summary": "",
+            "messages": [],
+            "personality": _ensure_personality(temp_session),
+        }
 
     return {
         "summary": session.get("summary", ""),

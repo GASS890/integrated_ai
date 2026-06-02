@@ -1,4 +1,4 @@
-from personality.state_manager import _ensure_personality
+from personality.state_manager import _ensure_personality, save_personality
 
 
 def update_personality(session: dict, user_text: str):
@@ -22,5 +22,8 @@ def update_personality(session: dict, user_text: str):
         p["tone"] = "friendly"
     else:
         p["tone"] = "close"
+
+    session["personality"] = p
+    save_personality(session)
 
     return p

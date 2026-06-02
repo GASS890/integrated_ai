@@ -3,7 +3,7 @@ import re
 import threading
 
 #from ollama_client import chat
-from personality.state_manager import _ensure_personality
+from personality.state_manager import _ensure_personality, save_personality
 
 
 INTENT_OPTIONS = {
@@ -104,6 +104,9 @@ def apply_attitude_to_personality(session: dict, intent: dict):
     p["last_sentiment"] = intent.get("sentiment", "neutral")
     p["last_attitude"] = intent.get("attitude", "normal")
     p["last_reason"] = intent.get("reason", "")
+
+    session["personality"] = p
+    save_personality(session)
 
     return p
 
