@@ -495,13 +495,22 @@ memories_lock = Lock()
 
 def persist_sessions():
     with sessions_lock:
-        save_sessions_to_file(dict(sessions))
+        safe_sessions = {}
+
+        for sid, s in sessions.items():
+            copy_session = dict(s)
+
+            if "personality" in copy_session:
+                del copy_session["personality"]
+
+            safe_sessions[sid] = copy_session
+
+        save_sessions_to_file(safe_sessions)
 
 
-def persist_memories():
-    with memories_lock:
-        save_memory_db(memory_db, MEMORY_FILE)
-
+        def persist_memories():
+            with memories_lock:
+                save_memory_db(memory_db, MEMORY_FILE)
 
 _loaded = load_sessions_from_file()
 
