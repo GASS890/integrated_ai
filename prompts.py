@@ -17,7 +17,7 @@ def build_messages(
 ):
     messages = []
 
-    system_parts = []
+    system_parts = [SAFETY_SYSTEM]
 
     if rules_text:
         system_parts.append(rules_text)

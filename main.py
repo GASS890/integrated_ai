@@ -19,7 +19,15 @@ import uuid
 from llm_client import call_ollama_chat, stream_ollama_chat, OPTIONS
 from voicevox_client import synthesize_voice
 from io import BytesIO
-from file_ops import write_file, append_file, read_file, read_line, delete_line
+from file_ops import (
+    write_file,
+    append_file,
+    read_file,
+    read_line,
+    delete_line,
+    list_files,
+    search_text_in_files,
+)
 from memory_store import (
     load_memory_db,
     save_memory_db,
@@ -368,10 +376,30 @@ def _ensure_title_once(session: dict, seed_text: str):
 # =========================================================
 # ファイル操作
 # =========================================================
+
 def try_file_operation(user_text: str):
     text = (user_text or "").strip()
 
     try:
+
+        # ===== 開発補助: ファイル一覧 =====
+        if text in [
+            "ファイル一覧",
+            "ファイル構成",
+            "現在のファイル構成",
+            "プロジェクト構成",
+        ]:
+            return list_files(".", max_depth=3)
+        
+        # ===== 開発補助: ファイル内検索 =====
+        if text.startswith("検索 "):
+            keyword = text.replace("検索 ", "", 1).strip()
+
+            if not keyword:
+                return "検索語を入力してください。"
+
+            return search_text_in_files(keyword)
+
         # ===== 明示コマンド =====
         if text.startswith("保存:"):
             _, rest = text.split("保存:", 1)
@@ -507,19 +535,10 @@ def persist_sessions():
 
         save_sessions_to_file(safe_sessions)
 
-        for sid, s in sessions.items():
-            copy_session = dict(s)
 
-            if "personality" in copy_session:
-                del copy_session["personality"]
-
-            safe_sessions[sid] = copy_session
-
-        save_sessions_to_file(safe_sessions)
-
-        def persist_memories():
-            with memories_lock:
-                save_memory_db(memory_db, MEMORY_FILE)
+def persist_memories():
+    with memories_lock:
+        save_memory_db(memory_db, MEMORY_FILE)
 
 _loaded = load_sessions_from_file()
 

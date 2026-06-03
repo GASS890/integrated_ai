@@ -6,27 +6,6 @@ import requests
 OLLAMA_URL = "http://localhost:11434/api/chat"
 session = requests.Session()
 
-from llm_client import (
-    call_ollama_chat,
-    stream_ollama_chat,
-)
-
-
-def chat(messages, model, options):
-    return call_ollama_chat(
-        messages,
-        model=model,
-        options=options,
-    )
-
-
-def stream(messages, model, options):
-    return stream_ollama_chat(
-        messages,
-        model=model,
-        options=options,
-    )
-
 def chat(messages, model, options=None, timeout=120):
     payload = {
         "model": model,
@@ -42,8 +21,8 @@ def chat(messages, model, options=None, timeout=120):
     )
     r.raise_for_status()
     data = r.json()
-    return data.get("message", {}).get("content", "")
 
+    return data.get("message", {}).get("content", "")
 
 def stream(messages, model, options=None, timeout=120):
     payload = {

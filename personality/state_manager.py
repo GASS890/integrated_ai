@@ -95,3 +95,25 @@ def save_personality(session: dict) -> dict:
     session["personality"] = p
 
     return p
+
+def save_personality_by_id(personality_id: str, personality: dict) -> dict:
+    key = str(personality_id or "default")
+    p = _normalize_personality(personality)
+
+    states = load_personality_states()
+    states[key] = p
+    save_personality_states(states)
+
+    return p
+
+
+def load_personality_by_id(personality_id: str) -> dict:
+    key = str(personality_id or "default")
+
+    states = load_personality_states()
+
+    if key not in states:
+        states[key] = _init_personality()
+        save_personality_states(states)
+
+    return _normalize_personality(states[key])
