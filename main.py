@@ -507,6 +507,15 @@ def persist_sessions():
 
         save_sessions_to_file(safe_sessions)
 
+        for sid, s in sessions.items():
+            copy_session = dict(s)
+
+            if "personality" in copy_session:
+                del copy_session["personality"]
+
+            safe_sessions[sid] = copy_session
+
+        save_sessions_to_file(safe_sessions)
 
         def persist_memories():
             with memories_lock:
