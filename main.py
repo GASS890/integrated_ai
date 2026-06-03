@@ -415,6 +415,14 @@ def try_file_operation(user_text: str):
             _, filename = text.split("読込:", 1)
             return read_file(filename.strip())
 
+        if text.startswith("読込 "):
+            filename = text.replace("読込 ", "", 1).strip()
+            return read_file(filename)
+
+        if text.startswith("read "):
+            filename = text.replace("read ", "", 1).strip()
+            return read_file(filename)
+
         if text.startswith("行読込:"):
             _, rest = text.split("行読込:", 1)
             filename, line_no = rest.strip().split(" ", 1)

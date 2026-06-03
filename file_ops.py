@@ -45,11 +45,18 @@ def append_file(path: str, content: str) -> str:
     return f"追記しました: {path}"
 
 # ===== 全読込 =====
-def read_file(path: str) -> str:
+def read_file(path: str, max_chars: int = 8000) -> str:
     full = _safe_path(path)
-    if not os.path.exists(full):
-        raise FileNotFoundError("ファイルが存在しません")
-    return "".join(_read_lines(full))
+    text = "".join(_read_lines(full))
+
+    if len(text) > max_chars:
+        return (
+            text[:max_chars]
+            + "\n\n...省略...\n"
+            + f"全文は {len(text)} 文字あります。"
+        )
+
+    return text
 
 # ===== 行読込 =====
 def read_line(path: str, line_no: int) -> str:
