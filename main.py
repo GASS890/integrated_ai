@@ -29,6 +29,12 @@ from file_ops import (
     search_text_in_files,
     search_function,
     search_import,
+    show_change_candidate,
+    replace_text_in_file,
+    preview_replace_plan,
+    replace_text_from_plan,
+    py_compile_file,
+    restore_backup,
 )
 from memory_store import (
     load_memory_db,
@@ -443,6 +449,101 @@ def try_file_operation(user_text: str):
                 return "import検索語を入力してください。"
 
             return search_import(keyword)
+
+        # ===== 開発補助: 変更候補表示 =====
+        if text.startswith("変更候補 "):
+            keyword = text.replace("変更候補 ", "", 1).strip()
+
+            if not keyword:
+                return "変更候補の検索語を入力してください。"
+
+            return show_change_candidate(keyword)
+
+        if text.startswith("candidate "):
+            keyword = text.replace("candidate ", "", 1).strip()
+
+            if not keyword:
+                return "変更候補の検索語を入力してください。"
+
+            return show_change_candidate(keyword)
+
+        # ===== 開発補助: 置換実行 =====
+        if text.startswith("置換実行 "):
+            plan_path = text.replace("置換実行 ", "", 1).strip()
+
+         # ===== 開発補助: 置換プレビュー =====
+        if text.startswith("置換確認 "):
+            plan_path = text.replace("置換確認 ", "", 1).strip()
+
+            if not plan_path:
+                return "置換指示ファイル名を入力してください。"
+
+            return preview_replace_plan(plan_path)
+
+        if text.startswith("preview-replace "):
+            plan_path = text.replace("preview-replace ", "", 1).strip()
+
+            if not plan_path:
+                return "置換指示ファイル名を入力してください。"
+
+            return preview_replace_plan(plan_path)
+
+        # ===== 開発補助: 置換実行 =====
+        if text.startswith("置換実行 "):
+            if not plan_path:
+                return "置換指示ファイル名を入力してください。"
+
+            return replace_text_from_plan(plan_path)
+
+        if text.startswith("replace-plan "):
+            plan_path = text.replace("replace-plan ", "", 1).strip()
+
+            if not plan_path:
+                return "置換指示ファイル名を入力してください。"
+
+            return replace_text_from_plan(plan_path)
+
+        # ===== 開発補助: 構文チェック =====
+        if text.startswith("構文確認 "):
+            path = text.replace("構文確認 ", "", 1).strip()
+
+            if not path:
+                return "構文確認するファイル名を入力してください。"
+
+            return py_compile_file(path)
+
+        if text.startswith("compile "):
+            path = text.replace("compile ", "", 1).strip()
+
+            if not path:
+                return "構文確認するファイル名を入力してください。"
+
+            return py_compile_file(path)
+
+        # ===== 開発補助: ロールバック =====
+        if text.startswith("復元 "):
+            path = text.replace("復元 ", "", 1).strip()
+
+            if not path:
+                return "復元するファイル名を入力してください。"
+
+            return restore_backup(path)
+
+        if text.startswith("rollback "):
+            path = text.replace("rollback ", "", 1).strip()
+
+            if not path:
+                return "復元するファイル名を入力してください。"
+
+            return restore_backup(path)
+
+        if text.startswith("replace-plan "):
+            plan_path = text.replace("replace-plan ", "", 1).strip()
+
+            if not plan_path:
+                return "置換指示ファイル名を入力してください。"
+
+            return replace_text_from_plan(plan_path)
 
         # ===== 明示コマンド =====
         if text.startswith("保存:"):
