@@ -2,13 +2,105 @@
 import os
 from pathlib import Path
 
+WORKSPACE_DIR = "workspace"
+
 BASE_DIR = os.path.abspath("workspace")
 
 def _safe_path(path: str) -> str:
-    full = os.path.abspath(os.path.join(BASE_DIR, path))
-    if not full.startswith(BASE_DIR):
-        raise ValueError("許可されていないパスです")
+    full = os.path.abspath(os.path.join(WORKSPACE_DIR, path))
+    if not full.startswith(os.path.abspath(WORKSPACE_DIR)):
+        raise ValueError("許可されていないパスです。")
     return full
+
+
+def is_protected_path(path: str) -> bool:
+    """
+    変更禁止ファイル・フォルダ判定。
+    """
+
+    protected_names = {
+        "APIkey.txt",
+        ".env",
+        "sessions.json",
+        "memories.json",
+        "personality_state.json",
+        "feedback.jsonl",
+        "eval_logs.jsonl",
+        "eval_results.jsonl",
+    }
+
+    protected_dirs = {
+        ".git",
+        "__pycache__",
+        ".venv",
+        "venv",
+        "build",
+        "dist",
+        "VOICEVOX",
+    }
+
+    normalized = path.replace("\\", "/").strip()
+    parts = normalized.split("/")
+
+    if any(part in protected_dirs for part in parts):
+        return True
+
+    if parts[-1] in protected_names:
+        return True
+
+    return False
+
+
+def is_allowed_edit_path(path: str) -> bool:
+    """
+    変更許可ファイル・フォルダ判定。
+    """
+
+    if is_protected_path(path):
+        return False
+
+    normalized = path.replace("\\", "/").strip()
+
+    allowed_exact = {
+        "main.py",
+        "file_ops.py",
+        "memory_store.py",
+        "prompts.py",
+        "llm_client.py",
+        "ollama_client.py",
+        "openai_client.py",
+        "voicevox_client.py",
+        "app_desktop.py",
+
+        # テスト用
+        "test.txt",
+        "replace_plan.json",
+    }
+    allowed_prefixes = (
+        "llm/",
+        "personality/",
+        "rules/",
+        "prompts/",
+        "static/",
+        "workspace/",
+    )
+
+    if normalized in allowed_exact:
+        return True
+
+    if normalized.startswith(allowed_prefixes):
+        return True
+
+    return False
+
+
+def assert_edit_allowed(path: str) -> None:
+    """
+    編集許可チェック。
+    """
+
+    if not is_allowed_edit_path(path):
+        raise PermissionError(f"変更禁止または未許可のファイルです: {path}")
 
 def _read_lines(full: str) -> list[str]:
     if not os.path.exists(full):
@@ -30,19 +122,22 @@ def _renumber(lines: list[str]) -> list[str]:
 
 # ===== 書き込み（改行＋番号付与）=====
 def write_file(path: str, content: str) -> str:
+    assert_edit_allowed(path)
+
     full = _safe_path(path)
-    lines = [f"1 {content}\n"]
-    _write_lines(full, lines)
-    return f"保存しました: {path}"
+    with open(full, "w", encoding="utf-8") as f:
+        f.write(content)
+    return f"{path} に保存しました。"
 
 # ===== 追記（改行＋番号付与）=====
 def append_file(path: str, content: str) -> str:
+    assert_edit_allowed(path)
+
     full = _safe_path(path)
     lines = _read_lines(full)
-    num = len(lines) + 1
-    lines.append(f"{num} {content}\n")
+    lines.append(content + "\n")
     _write_lines(full, lines)
-    return f"追記しました: {path}"
+    return f"{path} に追記しました。"
 
 # ===== 全読込 =====
 def read_file(path: str, max_chars: int = 8000) -> str:
@@ -75,8 +170,9 @@ def read_line(path: str, line_no: int) -> str:
 
     return lines[line_no - 1]
 
-
 def delete_line(path: str, line_no: int) -> str:
+    assert_edit_allowed(path)
+
     full = _safe_path(path)
     lines = _read_lines(full)
 
@@ -392,6 +488,8 @@ def replace_text_in_file(path: str, old_text: str, new_text: str) -> str:
     if isinstance(path, str) and path.startswith("workspace/"):
         path = path.replace("workspace/", "", 1)
 
+    assert_edit_allowed(path)
+
     full = _safe_path(path)
 
     text = Path(full).read_text(
@@ -562,6 +660,8 @@ def restore_backup(path: str) -> str:
 
     if isinstance(path, str) and path.startswith("workspace/"):
         path = path.replace("workspace/", "", 1)
+
+    assert_edit_allowed(path)
 
     full = _safe_path(path)
 
