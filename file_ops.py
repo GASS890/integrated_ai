@@ -167,9 +167,107 @@ def search_text_in_files(
     base_dir: str = ".",
     max_results: int = 30,
 ) -> str:
-    from pathlib import Path
-
     root = Path(base_dir).resolve()
+
+    ignore_dirs = {
+        ".git",
+        "__pycache__",
+        ".venv",
+        "venv",
+        "build",
+        "dist",
+        "VOICEVOX",
+    }
+
+    results = []
+
+    for path in root.rglob("*"):
+
+        if not path.is_file():
+            continue
+
+        if any(part in ignore_dirs for part in path.parts):
+            continue
+
+        try:
+            text = path.read_text(
+                encoding="utf-8",
+                errors="ignore",
+            )
+
+            if keyword not in text:
+                continue
+
+            for line_no, line in enumerate(text.splitlines(), start=1):
+                if keyword in line:
+                    rel = path.relative_to(root)
+                    results.append(f"{rel}:{line_no}: {line.strip()}")
+
+                    if len(results) >= max_results:
+                        return "\n".join(results)
+
+        except Exception:
+            continue
+
+    if not results:
+        return f"検索結果なし: {keyword}"
+
+    return "\n".join(results)
+
+
+def search_function(function_name: str) -> str:
+    """
+    def 関数名 を検索する。
+    """
+    keyword = f"def {function_name}"
+
+    return search_text_in_files(
+        keyword,
+        max_results=20,
+    )
+
+def search_function(function_name: str) -> str:
+    """
+    def 関数名 を検索する。
+    """
+    keyword = f"def {function_name}"
+
+    return search_text_in_files(
+        keyword,
+        max_results=20,
+    )
+
+
+def search_import(keyword: str) -> str:
+    """
+    import 文を検索する。
+    例:
+    - import personality
+    - import update_personality
+    - import call_ollama_chat
+    """
+
+    patterns = [
+        f"import {keyword}",
+        f"from {keyword}",
+        keyword,
+    ]
+
+    results = []
+
+    for pattern in patterns:
+        found = search_text_in_files(
+            pattern,
+            max_results=20,
+        )
+
+        if not found.startswith("検索結果なし"):
+            results.append(f"【pattern: {pattern}】\n{found}")
+
+    if not results:
+        return f"import検索結果なし: {keyword}"
+
+    return "\n\n".join(results)
 
     ignore_dirs = {
         ".git",

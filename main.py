@@ -27,6 +27,8 @@ from file_ops import (
     delete_line,
     list_files,
     search_text_in_files,
+    search_function,
+    search_import,
 )
 from memory_store import (
     load_memory_db,
@@ -399,6 +401,48 @@ def try_file_operation(user_text: str):
                 return "検索語を入力してください。"
 
             return search_text_in_files(keyword)
+
+        if text.startswith("search "):
+            keyword = text.replace("search ", "", 1).strip()
+
+            if not keyword:
+                return "検索語を入力してください。"
+
+            return search_text_in_files(keyword)
+
+        # ===== 開発補助: 関数検索 =====
+        if text.startswith("関数 "):
+            func_name = text.replace("関数 ", "", 1).strip()
+
+            if not func_name:
+                return "関数名を入力してください。"
+
+            return search_function(func_name)
+
+        if text.startswith("function "):
+            func_name = text.replace("function ", "", 1).strip()
+
+            if not func_name:
+                return "関数名を入力してください。"
+
+            return search_function(func_name)
+
+        # ===== 開発補助: import検索 =====
+        if text.startswith("import "):
+            keyword = text.replace("import ", "", 1).strip()
+
+            if not keyword:
+                return "import検索語を入力してください。"
+
+            return search_import(keyword)
+
+        if text.startswith("インポート "):
+            keyword = text.replace("インポート ", "", 1).strip()
+
+            if not keyword:
+                return "import検索語を入力してください。"
+
+            return search_import(keyword)
 
         # ===== 明示コマンド =====
         if text.startswith("保存:"):
