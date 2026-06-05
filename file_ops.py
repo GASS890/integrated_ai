@@ -88,6 +88,10 @@ def is_allowed_edit_path(path: str) -> bool:
     if normalized in allowed_exact:
         return True
 
+    # workspace直下のテスト用ファイルを許可
+    if "/" not in normalized and normalized.endswith((".txt", ".json", ".py")):
+        return True
+
     if normalized.startswith(allowed_prefixes):
         return True
 
@@ -101,6 +105,28 @@ def assert_edit_allowed(path: str) -> None:
 
     if not is_allowed_edit_path(path):
         raise PermissionError(f"変更禁止または未許可のファイルです: {path}")
+
+
+def log_dev_change(action: str, path: str, detail: str = "") -> None:
+    """
+    開発補助モードの変更履歴をログに残す。
+    """
+
+    import json
+    import time
+
+    log_path = Path(WORKSPACE_DIR) / "dev_changes.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    item = {
+        "time": time.time(),
+        "action": action,
+        "path": path,
+        "detail": detail,
+    }
+
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
 def _read_lines(full: str) -> list[str]:
     if not os.path.exists(full):
@@ -514,6 +540,12 @@ def replace_text_in_file(path: str, old_text: str, new_text: str) -> str:
         encoding="utf-8",
     )
 
+    log_dev_change(
+        action="replace",
+        path=path,
+        detail=f"backup={backup_path}",
+    )
+
     return f"{path} を置換しました。バックアップ: {backup_path}"
 
 
@@ -543,23 +575,50 @@ def preview_replace_plan(plan_path: str) -> str:
     if not path or old_text is None or new_text is None:
         return "置換指示ファイルの形式が不正です。path / old_text / new_text が必要です。"
 
+    approved_path = Path(WORKSPACE_DIR) / ".replace_approved"
+
+    approved_path.write_text(
+        plan_path,
+        encoding="utf-8",
+    )
+
     return (
         "置換プレビュー\n\n"
         f"対象ファイル:\n{path}\n\n"
         f"変更前:\n```text\n{old_text}\n```\n\n"
-        f"変更後:\n```text\n{new_text}\n```"
+        f"変更後:\n```text\n{new_text}\n```\n\n"
+        "この内容でよければ、次に実行してください:\n"
+        f"置換実行 {plan_path}"
     )
-
 
 def replace_text_from_plan(plan_path: str) -> str:
     """
     Execute a JSON replace plan.
+    If target is a Python file, run py_compile after replacement.
+    If compile fails, restore backup automatically.
     """
 
     import json
 
     if isinstance(plan_path, str) and plan_path.startswith("workspace/"):
         plan_path = plan_path.replace("workspace/", "", 1)
+
+    approved_path = Path(WORKSPACE_DIR) / ".replace_approved"
+
+    if not approved_path.exists():
+        return "先に 置換確認 を実行してください。"
+
+    approved_plan = approved_path.read_text(
+        encoding="utf-8",
+        errors="ignore",
+    ).strip()
+
+    if approved_plan != plan_path:
+        return (
+            "置換確認済みのファイルと実行ファイルが一致しません。\n"
+            f"確認済み: {approved_plan}\n"
+            f"実行要求: {plan_path}"
+        )
 
     full_plan_path = _safe_path(plan_path)
 
@@ -577,45 +636,39 @@ def replace_text_from_plan(plan_path: str) -> str:
     if not path or old_text is None or new_text is None:
         return "置換指示ファイルの形式が不正です。path / old_text / new_text が必要です。"
 
-    return replace_text_in_file(
+    replace_result = replace_text_in_file(
         path=path,
         old_text=old_text,
         new_text=new_text,
     )
 
+    if isinstance(path, str) and path.endswith(".py"):
+        compile_result = py_compile_file(path)
 
-def replace_text_from_plan(plan_path: str) -> str:
-    """
-    Execute a JSON replace plan.
-    """
+        if compile_result.startswith("構文チェックNG"):
+            rollback_result = restore_backup(path)
 
-    import json
+            if approved_path.exists():
+                approved_path.unlink()
 
-    if isinstance(plan_path, str) and plan_path.startswith("workspace/"):
-        plan_path = plan_path.replace("workspace/", "", 1)
+            return (
+                replace_result
+                + "\n\n"
+                + compile_result
+                + "\n\n"
+                + "構文エラーのため自動復元しました。\n"
+                + rollback_result
+            )
 
-    full_plan_path = _safe_path(plan_path)
+        if approved_path.exists():
+            approved_path.unlink()
 
-    plan_text = Path(full_plan_path).read_text(
-        encoding="utf-8",
-        errors="ignore",
-    )
+        return replace_result + "\n\n" + compile_result
 
-    plan = json.loads(plan_text)
+    if approved_path.exists():
+        approved_path.unlink()
 
-    path = plan.get("path")
-    old_text = plan.get("old_text")
-    new_text = plan.get("new_text")
-
-    if not path or old_text is None or new_text is None:
-        return "置換指示ファイルの形式が不正です。path / old_text / new_text が必要です。"
-
-    return replace_text_in_file(
-        path=path,
-        old_text=old_text,
-        new_text=new_text,
-    )
-
+    return replace_result
 
 def py_compile_file(path: str) -> str:
     """
@@ -628,7 +681,7 @@ def py_compile_file(path: str) -> str:
     if isinstance(path, str) and path.startswith("workspace/"):
         path = path.replace("workspace/", "", 1)
 
-    full = Path(path)
+    full = Path(_safe_path(path))
 
     if not full.exists():
         return f"ファイルが存在しません: {path}"
@@ -678,6 +731,12 @@ def restore_backup(path: str) -> str:
     Path(full).write_text(
         original_text,
         encoding="utf-8",
+    )
+
+    log_dev_change(
+        action="rollback",
+        path=path,
+        detail=f"backup={backup}",
     )
 
     return f"復元完了: {path}"
