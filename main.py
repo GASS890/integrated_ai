@@ -16,7 +16,7 @@ import sys
 import time
 import uuid
 
-from llm_client import call_ollama_chat, stream_ollama_chat, OPTIONS
+from llm_client import call_chat, stream_chat, OPTIONS
 from voicevox_client import synthesize_voice
 from io import BytesIO
 from file_ops import (
@@ -268,7 +268,7 @@ def format_answer(user_text: str, raw_answer: str) -> str:
         {"role": "user", "content": f"【ユーザーの要求】\n{user_text}\n\n【元の回答】\n{raw_answer}\n"},
     ]
     try:
-        formatted = call_ollama_chat(prompt, FORMAT_MODEL, options=OPTIONS["format"])
+        formatted = call_chat(prompt, FORMAT_MODEL, options=OPTIONS["format"])
         if _looks_like_hallucinated_format(raw_answer, formatted):
             return raw_answer
         return formatted
@@ -295,7 +295,7 @@ def generate_title(text: str) -> str:
     ]
 
     try:
-        title = call_ollama_chat(prompt, TITLE_MODEL, options=OPTIONS["title"]) or ""
+        title = call_chat(prompt, TITLE_MODEL, options=OPTIONS["title"]) or ""
         return _sanitize_title(title, max_len=15)
     except Exception as e:
         print("generate_title error:", e)
@@ -341,7 +341,7 @@ def summarize_session(session: dict):
     ]
 
     try:
-        new_summary = call_ollama_chat(summary_prompt, SUMMARIZE_MODEL, options=OPTIONS["summarize"]) or ""
+        new_summary = call_chat(summary_prompt, SUMMARIZE_MODEL, options=OPTIONS["summarize"]) or ""
         session["summary"] = new_summary
     except Exception as e:
         print("summarize_session error:", e)
@@ -353,7 +353,7 @@ def summarize_session(session: dict):
                 {"role": "system", "content": SUMMARIZE_SYSTEM or ""},
                 {"role": "user", "content": f"【目的】以下の要約を短く圧縮してください。\n最大{MAX_SUMMARY_CHARS}文字程度。\n\n【要約】\n{s}"},
             ]
-            session["summary"] = call_ollama_chat(shrink_prompt, SUMMARIZE_MODEL, options=OPTIONS["summarize"]) or s
+            session["summary"] = call_chat(shrink_prompt, SUMMARIZE_MODEL, options=OPTIONS["summarize"]) or s
     except Exception as e:
         print("summary shrink error:", e)
 
@@ -927,7 +927,7 @@ def ask(req: AskRequest):
 
         opt = OPTIONS["smart_chat"] if model == SMART_MODEL else OPTIONS["fast_chat"]
 
-        raw_answer = call_ollama_chat(messages, model, options=opt)
+        raw_answer = call_chat(messages, model, options=opt)
         answer = format_answer(q, raw_answer)
 
         finalize_interaction(session_id, session, q, answer, intent=intent)
@@ -1026,7 +1026,7 @@ def ask_stream(req: AskRequest):
     def event_gen():
         answer_parts: list[str] = []
         try:
-            for delta in stream_ollama_chat(messages, model, options=opt):
+            for delta in stream_chat(messages, model, options=opt):
                 answer_parts.append(delta)
                 yield f"data: {json.dumps({'type':'delta','text':delta}, ensure_ascii=False)}\n\n"
 
