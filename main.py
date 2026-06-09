@@ -20,6 +20,7 @@ from dev_assistant.code_reviewer import (
     review_current_diff,
     is_review_approved,
 )
+from dev_assistant.commit_message_generator import generate_commit_message
 from dev_assistant.git_tools import (
     get_git_status,
     get_git_diff,
@@ -983,6 +984,9 @@ def ask(req: AskRequest):
 
         if q.strip() == "変更承認":
             try:
+                patch = load_pending_patch()
+                commit_message = generate_commit_message(patch.purpose)
+
                 apply_result = apply_pending_patch_with_compile_check()
 
                 if apply_result.startswith("Patch applied successfully."):
@@ -994,7 +998,7 @@ def ask(req: AskRequest):
                         )
                     elif is_auto_git_commit_enabled():
                         git_result = commit_all_changes(
-                            "auto: apply approved patch"
+                            commit_message
                         )
                     else:
                         git_result = "Auto git commit is disabled."
@@ -1246,6 +1250,9 @@ def ask_stream(req: AskRequest):
 
     if q.strip() == "変更承認":
         try:
+            patch = load_pending_patch()
+            commit_message = generate_commit_message(patch.purpose)
+
             apply_result = apply_pending_patch_with_compile_check()
 
             if apply_result.startswith("Patch applied successfully."):
@@ -1257,7 +1264,7 @@ def ask_stream(req: AskRequest):
                     )
                 elif is_auto_git_commit_enabled():
                     git_result = commit_all_changes(
-                        "auto: apply approved patch"
+                        commit_message
                     )
                 else:
                     git_result = (
