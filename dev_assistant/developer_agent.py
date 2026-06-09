@@ -4,7 +4,8 @@ from dev_assistant.dev_mode import DevMode, describe_dev_mode
 from dev_assistant.archive_manager import read_archive
 from dev_assistant.pending_archive import save_pending_update
 from dev_assistant.git_tools import get_git_status, get_git_diff
-
+from dev_assistant.patch_parser import parse_patch_response
+from dev_assistant.pending_patch import save_pending_patch
 
 DEFAULT_RELATED_FILES = [
     "llm_client.py",
@@ -75,3 +76,37 @@ def propose_archive_update(
     save_pending_update(proposal)
 
     return proposal
+
+def propose_pending_patch(
+    instruction: str,
+    related_files: list[str] | None = None,
+    mode: DevMode = DevMode.FEATURE,
+) -> str:
+    response = ask_developer_agent(
+        instruction=instruction,
+        related_files=related_files,
+        mode=mode,
+    )
+
+    patch = parse_patch_response(response)
+
+    if patch is None:
+        return (
+            "変更案の解析に失敗しました。\n\n"
+            "Developer Agentの出力に以下が含まれているか確認してください。\n"
+            "- 変更対象ファイル\n"
+            "- 変更目的\n"
+            "- 変更前コード\n"
+            "- 変更後コード\n\n"
+            "===== Developer Agent response =====\n"
+            f"{response}"
+        )
+
+    save_pending_patch(patch)
+
+    return (
+        "変更案を pending_patch.json に保存しました。\n\n"
+        f"対象ファイル: {patch.target_file}\n"
+        f"目的: {patch.purpose}\n\n"
+        "チャット欄で「変更案確認」と入力して確認できます。"
+    )

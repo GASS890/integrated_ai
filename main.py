@@ -6,6 +6,7 @@ from prompts import build_messages
 from dev_assistant.developer_agent import (
     ask_developer_agent,
     propose_archive_update,
+    propose_pending_patch,
 )
 from dev_assistant.dev_mode import DevMode
 from dev_assistant.archive_manager import append_archive
@@ -956,6 +957,25 @@ def ask(req: AskRequest):
                 archive_event(),
                 media_type="text/event-stream",
             )
+
+        if q.startswith("変更提案 "):
+            instruction = q.replace("変更提案 ", "", 1).strip()
+
+            if not instruction:
+                result = "変更提案の内容が空です。"
+            else:
+                result = propose_pending_patch(instruction)
+
+            def propose_patch_event():
+                yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'propose_patch', 'personality': {}}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(
+                propose_patch_event(),
+                media_type="text/event-stream",
+            )
+
         if q.strip() == "変更承認":
             try:
                 apply_result = apply_pending_patch()
@@ -1219,6 +1239,24 @@ def ask_stream(req: AskRequest):
 
         return StreamingResponse(
             apply_patch_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.startswith("変更提案 "):
+        instruction = q.replace("変更提案 ", "", 1).strip()
+
+        if not instruction:
+            result = "変更提案の内容が空です。"
+        else:
+            result = propose_pending_patch(instruction)
+
+        def propose_patch_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'propose_patch', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            propose_patch_event(),
             media_type="text/event-stream",
         )
 
