@@ -978,7 +978,18 @@ def ask(req: AskRequest):
 
         if q.strip() == "変更承認":
             try:
-                result = apply_pending_patch_with_compile_check()
+                apply_result = apply_pending_patch_with_compile_check()
+
+                if apply_result.startswith("Patch applied successfully."):
+                    review_result = review_current_diff()
+                    result = (
+                        f"{apply_result}\n\n"
+                        "===== code review result =====\n"
+                        f"{review_result}"
+                    )
+                else:
+                    result = apply_result
+
             except Exception as e:
                 result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
 
@@ -1216,7 +1227,18 @@ def ask_stream(req: AskRequest):
 
     if q.strip() == "変更承認":
         try:
-            result = apply_pending_patch_with_compile_check()
+            apply_result = apply_pending_patch_with_compile_check()
+
+            if apply_result.startswith("Patch applied successfully."):
+                review_result = review_current_diff()
+                result = (
+                    f"{apply_result}\n\n"
+                    "===== code review result =====\n"
+                    f"{review_result}"
+                )
+            else:
+                result = apply_result
+
         except Exception as e:
             result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
 
