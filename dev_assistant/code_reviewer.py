@@ -72,3 +72,14 @@ def save_review_history(diff: str, review: str) -> None:
         json.dumps(history, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+def is_review_approved(review: str) -> bool:
+    normalized = review.replace(" ", "").replace("　", "")
+
+    if "判定:問題なし" in normalized:
+        return True
+
+    if "1.判定:問題なし" in normalized:
+        return True
+
+    return False

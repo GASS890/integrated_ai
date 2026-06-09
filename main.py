@@ -16,7 +16,10 @@ from dev_assistant.pending_archive import (
 )
 from dev_assistant.pending_patch import has_pending_patch, load_pending_patch
 from dev_assistant.safe_apply import apply_pending_patch_with_compile_check
-from dev_assistant.code_reviewer import review_current_diff
+from dev_assistant.code_reviewer import (
+    review_current_diff,
+    is_review_approved,
+)
 from dev_assistant.git_tools import (
     get_git_status,
     get_git_diff,
@@ -985,7 +988,11 @@ def ask(req: AskRequest):
                 if apply_result.startswith("Patch applied successfully."):
                     review_result = review_current_diff()
 
-                    if is_auto_git_commit_enabled():
+                    if not is_review_approved(review_result):
+                        git_result = (
+                            "Git commit skipped because code review was not approved."
+                        )
+                    elif is_auto_git_commit_enabled():
                         git_result = commit_all_changes(
                             "auto: apply approved patch"
                         )
@@ -1244,7 +1251,11 @@ def ask_stream(req: AskRequest):
             if apply_result.startswith("Patch applied successfully."):
                 review_result = review_current_diff()
 
-                if is_auto_git_commit_enabled():
+                if not is_review_approved(review_result):
+                    git_result = (
+                        "Git commit skipped because code review was not approved."
+                    )
+                elif is_auto_git_commit_enabled():
                     git_result = commit_all_changes(
                         "auto: apply approved patch"
                     )
