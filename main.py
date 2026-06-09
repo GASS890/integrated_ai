@@ -13,6 +13,8 @@ from dev_assistant.pending_archive import (
     load_pending_update,
     clear_pending_update,
 )
+from dev_assistant.pending_patch import has_pending_patch, load_pending_patch
+from dev_assistant.safe_apply import apply_pending_patch
 from dev_assistant.git_tools import (
     get_git_status,
     get_git_diff,
@@ -953,6 +955,27 @@ def ask(req: AskRequest):
                 archive_event(),
                 media_type="text/event-stream",
             )
+        if q.strip() == "変更承認":
+            try:
+                apply_result = apply_pending_patch()
+                check_result = py_compile_all()
+                result = (
+                    f"{apply_result}\n\n"
+                    "===== py_compile result =====\n"
+                    f"{check_result}"
+                )
+            except Exception as e:
+                result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
+
+            def apply_patch_event():
+                yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'safe_apply', 'personality': {}}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(
+                apply_patch_event(),
+                media_type="text/event-stream",
+            )
 
         if is_developer_agent_enabled() and is_developer_request(q):
             result = ask_developer_agent(
@@ -1130,12 +1153,58 @@ def ask_stream(req: AskRequest):
         result = get_git_diff()
 
         def git_diff_event():
-            yield f"data: {json.dumps({'type': 'replace', 'text': result or '差分なし'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'replace', 'text': result or '差分はありません。'}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'git_diff', 'personality': {}}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
 
         return StreamingResponse(
             git_diff_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "変更案確認":
+        if not has_pending_patch():
+            result = "保留中の変更案はありません。"
+        else:
+            patch = load_pending_patch()
+            result = (
+                f"対象ファイル: {patch.target_file}\n\n"
+                f"目的: {patch.purpose}\n\n"
+                "----- 変更前 -----\n"
+                f"{patch.before_code}\n\n"
+                "----- 変更後 -----\n"
+                f"{patch.after_code}"
+            )
+
+        def pending_patch_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'pending_patch', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            pending_patch_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "変更承認":
+        try:
+            apply_result = apply_pending_patch()
+            check_result = py_compile_all()
+            result = (
+                f"{apply_result}\n\n"
+                "===== py_compile result =====\n"
+                f"{check_result}"
+            )
+        except Exception as e:
+            result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
+
+        def apply_patch_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'safe_apply', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            apply_patch_event(),
             media_type="text/event-stream",
         )
 
