@@ -87,6 +87,7 @@ from app_settings import (
     load_app_settings,
     is_developer_agent_enabled,
     set_developer_agent_enabled,
+    is_auto_git_commit_enabled,
 )
 
 # ===== FastAPI App =====
@@ -983,7 +984,14 @@ def ask(req: AskRequest):
 
                 if apply_result.startswith("Patch applied successfully."):
                     review_result = review_current_diff()
-                    git_result = commit_all_changes("auto: apply approved patch")
+
+                    if is_auto_git_commit_enabled():
+                        git_result = commit_all_changes(
+                            "auto: apply approved patch"
+                        )
+                    else:
+                        git_result = "Auto git commit is disabled."
+
                     result = (
                         f"{apply_result}\n\n"
                         "===== code review result =====\n"
@@ -1235,7 +1243,16 @@ def ask_stream(req: AskRequest):
 
             if apply_result.startswith("Patch applied successfully."):
                 review_result = review_current_diff()
-                git_result = commit_all_changes("auto: apply approved patch")
+
+                if is_auto_git_commit_enabled():
+                    git_result = commit_all_changes(
+                        "auto: apply approved patch"
+                    )
+                else:
+                    git_result = (
+                        "Auto git commit is disabled."
+                    )
+
                 result = (
                     f"{apply_result}\n\n"
                     "===== code review result =====\n"
@@ -1243,11 +1260,15 @@ def ask_stream(req: AskRequest):
                     "===== git commit result =====\n"
                     f"{git_result}"
                 )
+
             else:
                 result = apply_result
 
         except Exception as e:
-            result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
+            result = (
+                f"変更適用に失敗しました。\n"
+                f"{type(e).__name__}: {e}"
+            )
 
         def apply_patch_event():
             yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
