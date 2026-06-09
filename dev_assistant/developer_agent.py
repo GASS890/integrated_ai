@@ -7,6 +7,7 @@ from dev_assistant.git_tools import get_git_status, get_git_diff
 from dev_assistant.patch_parser import parse_patch_response
 from dev_assistant.pending_patch import save_pending_patch
 from dev_assistant.file_selector import select_related_files
+from dev_assistant.patch_scorer import score_patch
 
 DEFAULT_RELATED_FILES = [
     "llm_client.py",
@@ -105,9 +106,17 @@ def propose_pending_patch(
 
     save_pending_patch(patch)
 
+    score = score_patch(
+        purpose=patch.purpose,
+        before_code=patch.before_code,
+        after_code=patch.after_code,
+    )
+
     return (
         "変更案を pending_patch.json に保存しました。\n\n"
         f"対象ファイル: {patch.target_file}\n"
         f"目的: {patch.purpose}\n\n"
+        "===== patch score =====\n"
+        f"{score.render()}\n\n"
         "チャット欄で「変更案確認」と入力して確認できます。"
     )
