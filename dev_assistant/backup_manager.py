@@ -26,3 +26,29 @@ def create_backup(target_file: str) -> Path:
     shutil.copy2(source_path, backup_path)
 
     return backup_path
+
+
+def restore_backup(
+    backup_path: str | Path,
+    target_file: str,
+) -> Path:
+    backup_path = Path(backup_path)
+
+    if not backup_path.exists():
+        raise FileNotFoundError(
+            f"バックアップが見つかりません: {backup_path}"
+        )
+
+    target_path = PROJECT_ROOT / target_file
+
+    target_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    shutil.copy2(
+        backup_path,
+        target_path,
+    )
+
+    return target_path

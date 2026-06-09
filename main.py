@@ -15,7 +15,7 @@ from dev_assistant.pending_archive import (
     clear_pending_update,
 )
 from dev_assistant.pending_patch import has_pending_patch, load_pending_patch
-from dev_assistant.safe_apply import apply_pending_patch
+from dev_assistant.safe_apply import apply_pending_patch_with_compile_check
 from dev_assistant.code_reviewer import review_current_diff
 from dev_assistant.git_tools import (
     get_git_status,
@@ -978,13 +978,7 @@ def ask(req: AskRequest):
 
         if q.strip() == "変更承認":
             try:
-                apply_result = apply_pending_patch()
-                check_result = py_compile_all()
-                result = (
-                    f"{apply_result}\n\n"
-                    "===== py_compile result =====\n"
-                    f"{check_result}"
-                )
+                result = apply_pending_patch_with_compile_check()
             except Exception as e:
                 result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
 
@@ -1222,13 +1216,7 @@ def ask_stream(req: AskRequest):
 
     if q.strip() == "変更承認":
         try:
-            apply_result = apply_pending_patch()
-            check_result = py_compile_all()
-            result = (
-                f"{apply_result}\n\n"
-                "===== py_compile result =====\n"
-                f"{check_result}"
-            )
+            result = apply_pending_patch_with_compile_check()
         except Exception as e:
             result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
 
