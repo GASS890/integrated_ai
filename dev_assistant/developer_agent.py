@@ -6,6 +6,7 @@ from dev_assistant.pending_archive import save_pending_update
 from dev_assistant.git_tools import get_git_status, get_git_diff
 from dev_assistant.patch_parser import parse_patch_response
 from dev_assistant.pending_patch import save_pending_patch
+from dev_assistant.file_selector import select_related_files
 
 DEFAULT_RELATED_FILES = [
     "llm_client.py",
@@ -22,7 +23,7 @@ def ask_developer_agent(
     related_files: list[str] | None = None,
     mode: DevMode = DevMode.REPAIR,
 ) -> str:
-    files = related_files or DEFAULT_RELATED_FILES
+    files = related_files or select_related_files(instruction)
 
     archive_text = read_archive()
     git_status = get_git_status()
