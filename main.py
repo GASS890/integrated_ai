@@ -7,6 +7,7 @@ from dev_assistant.developer_agent import (
     ask_developer_agent,
     propose_archive_update,
     propose_pending_patch,
+    propose_autonomous_development,
 )
 from dev_assistant.dev_mode import DevMode
 from dev_assistant.archive_manager import append_archive
@@ -966,6 +967,21 @@ def ask(req: AskRequest):
                 media_type="text/event-stream",
             )
 
+        if q.startswith("自律開発 "):
+            goal = q.replace("自律開発 ", "", 1).strip()
+
+            if not goal:
+                result = "自律開発の目標が空です。"
+            else:
+                result = propose_autonomous_development(goal)
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "autonomous_development",
+            }
+
         if q.startswith("変更提案 "):
             instruction = q.replace("変更提案 ", "", 1).strip()
 
@@ -1325,6 +1341,24 @@ def ask_stream(req: AskRequest):
 
         return StreamingResponse(
             apply_patch_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.startswith("自律開発 "):
+        goal = q.replace("自律開発 ", "", 1).strip()
+
+        if not goal:
+            result = "自律開発の目標が空です。"
+        else:
+            result = propose_autonomous_development(goal)
+
+        def autonomous_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'autonomous_development', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            autonomous_event(),
             media_type="text/event-stream",
         )
 

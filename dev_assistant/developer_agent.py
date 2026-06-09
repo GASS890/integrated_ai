@@ -8,6 +8,10 @@ from dev_assistant.patch_parser import parse_patch_response
 from dev_assistant.pending_patch import save_pending_patch
 from dev_assistant.file_selector import select_related_files
 from dev_assistant.patch_scorer import score_patch
+from dev_assistant.autonomous_planner import (
+    build_autonomous_plan,
+    build_developer_instruction_from_plan,
+)
 
 DEFAULT_RELATED_FILES = [
     "llm_client.py",
@@ -119,4 +123,23 @@ def propose_pending_patch(
         "===== patch score =====\n"
         f"{score.render()}\n\n"
         "チャット欄で「変更案確認」と入力して確認できます。"
+    )
+
+
+def propose_autonomous_development(
+    goal: str,
+) -> str:
+    plan = build_autonomous_plan(goal)
+    instruction = build_developer_instruction_from_plan(plan)
+
+    result = propose_pending_patch(
+        instruction=instruction,
+        related_files=plan.related_files,
+        mode=DevMode.FEATURE,
+    )
+
+    return (
+        f"{plan.render()}\n\n"
+        "===== autonomous patch proposal =====\n"
+        f"{result}"
     )
