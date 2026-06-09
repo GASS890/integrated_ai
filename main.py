@@ -20,6 +20,7 @@ from dev_assistant.code_reviewer import review_current_diff
 from dev_assistant.git_tools import (
     get_git_status,
     get_git_diff,
+    commit_all_changes,
 )
 
 from dev_assistant.check_tools import (
@@ -982,10 +983,13 @@ def ask(req: AskRequest):
 
                 if apply_result.startswith("Patch applied successfully."):
                     review_result = review_current_diff()
+                    git_result = commit_all_changes("auto: apply approved patch")
                     result = (
                         f"{apply_result}\n\n"
                         "===== code review result =====\n"
-                        f"{review_result}"
+                        f"{review_result}\n\n"
+                        "===== git commit result =====\n"
+                        f"{git_result}"
                     )
                 else:
                     result = apply_result
@@ -1231,10 +1235,13 @@ def ask_stream(req: AskRequest):
 
             if apply_result.startswith("Patch applied successfully."):
                 review_result = review_current_diff()
+                git_result = commit_all_changes("auto: apply approved patch")
                 result = (
                     f"{apply_result}\n\n"
                     "===== code review result =====\n"
-                    f"{review_result}"
+                    f"{review_result}\n\n"
+                    "===== git commit result =====\n"
+                    f"{git_result}"
                 )
             else:
                 result = apply_result
