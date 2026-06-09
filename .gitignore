@@ -41,3 +41,6 @@ sessions.json
 feedback.jsonl
 memories.json
 __pycache__/
+
+# Local settings
+app_settings.json
