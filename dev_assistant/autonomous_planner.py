@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from dev_assistant.file_selector import select_related_files
-
+from dev_assistant.patch_alternatives import (
+    choose_best_alternative,
+    generate_patch_alternatives,
+    render_alternatives,
+)
 
 @dataclass
 class AutonomousPlan:
@@ -12,6 +16,8 @@ class AutonomousPlan:
     proposal: str
     steps: list[str]
     related_files: list[str]
+    alternatives_text: str
+    selected_strategy: str
 
     def render(self) -> str:
         return (
@@ -19,6 +25,8 @@ class AutonomousPlan:
             f"Goal:\n{self.goal}\n\n"
             f"Analysis:\n{self.analysis}\n\n"
             f"Proposal:\n{self.proposal}\n\n"
+            f"Alternatives:\n{self.alternatives_text}\n\n"
+            f"Selected strategy:\n{self.selected_strategy}\n\n"
             "Steps:\n"
             + "\n".join(f"- {step}" for step in self.steps)
             + "\n\n"
@@ -26,9 +34,11 @@ class AutonomousPlan:
             + "\n".join(f"- {file_path}" for file_path in self.related_files)
         )
 
-
 def build_autonomous_plan(goal: str) -> AutonomousPlan:
     related_files = select_related_files(goal)
+
+    alternatives = generate_patch_alternatives(goal)
+    best_alternative = choose_best_alternative(alternatives)
 
     analysis = _build_analysis(goal, related_files)
     proposal = _build_proposal(goal)
@@ -40,8 +50,9 @@ def build_autonomous_plan(goal: str) -> AutonomousPlan:
         proposal=proposal,
         steps=steps,
         related_files=related_files,
+        alternatives_text=render_alternatives(alternatives),
+        selected_strategy=best_alternative.render(),
     )
-
 
 def build_developer_instruction_from_plan(plan: AutonomousPlan) -> str:
     return (
@@ -58,6 +69,8 @@ def build_developer_instruction_from_plan(plan: AutonomousPlan) -> str:
         "- APIキーや個人情報を含めない\n"
         "- 変更前コードは現在のファイル内容と完全一致する範囲にする\n"
         "- 大きすぎる変更は避ける\n\n"
+        "採用する方針:\n"
+        f"{plan.selected_strategy}\n\n"
         f"{plan.render()}"
     )
 
