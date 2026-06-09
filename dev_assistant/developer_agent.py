@@ -5,12 +5,16 @@ from dev_assistant.archive_manager import read_archive
 from dev_assistant.pending_archive import save_pending_update
 from dev_assistant.git_tools import get_git_status, get_git_diff
 from dev_assistant.patch_parser import parse_patch_response
-from dev_assistant.pending_patch import save_pending_patch
+from dev_assistant.pending_patch import save_pending_patch, load_pending_patch
 from dev_assistant.file_selector import select_related_files
 from dev_assistant.patch_scorer import score_patch
 from dev_assistant.autonomous_planner import (
     build_autonomous_plan,
     build_developer_instruction_from_plan,
+)
+from dev_assistant.autonomous_history import (
+    render_recent_autonomous_history,
+    save_autonomous_history,
 )
 
 DEFAULT_RELATED_FILES = [
@@ -125,11 +129,14 @@ def propose_pending_patch(
         "チャット欄で「変更案確認」と入力して確認できます。"
     )
 
-
 def propose_autonomous_development(
     goal: str,
 ) -> str:
-    plan = build_autonomous_plan(goal)
+    recent_history = render_recent_autonomous_history()
+
+    plan = build_autonomous_plan(
+        f"{goal}\n\nRecent autonomous history:\n{recent_history}"
+    )
     instruction = build_developer_instruction_from_plan(plan)
 
     result = propose_pending_patch(
@@ -138,8 +145,22 @@ def propose_autonomous_development(
         mode=DevMode.FEATURE,
     )
 
+    try:
+        patch = load_pending_patch()
+        save_autonomous_history(
+            goal=goal,
+            selected_strategy=plan.selected_strategy,
+            related_files=plan.related_files,
+            target_file=patch.target_file,
+            purpose=patch.purpose,
+        )
+    except Exception:
+        pass
+
     return (
         f"{plan.render()}\n\n"
+        "===== recent autonomous history =====\n"
+        f"{recent_history}\n\n"
         "===== autonomous patch proposal =====\n"
         f"{result}"
     )
