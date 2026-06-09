@@ -4,8 +4,24 @@ import os
 from openai import OpenAI
 from .models import OPENAI_MODEL_FAST, OPENAI_MODEL_SMART
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+_client = None
 
+
+def get_client():
+    global _client
+
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+
+        if not api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY が設定されていません。"
+                " API利用前に環境変数を設定してください。"
+            )
+
+        _client = OpenAI(api_key=api_key)
+
+    return _client
 
 def to_openai_model(model: str | None) -> str:
     if model == "qwen2.5:14b":
@@ -20,6 +36,8 @@ def max_tokens_from_options(options: dict | None) -> int:
 
 
 def chat(messages, model, options=None, timeout=120):
+    client = get_client()
+
     response = client.chat.completions.create(
         model=to_openai_model(model),
         messages=messages,
@@ -31,8 +49,9 @@ def chat(messages, model, options=None, timeout=120):
 
     return response.choices[0].message.content or ""
 
-
 def stream(messages, model, options=None, timeout=120):
+    client = get_client()
+
     response_stream = client.chat.completions.create(
         model=to_openai_model(model),
         messages=messages,

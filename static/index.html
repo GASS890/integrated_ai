@@ -390,6 +390,13 @@
       </div>
 
       <div>
+        <label class="setting-row">
+          <input type="checkbox" id="developerAgentToggle">
+          <span>ChatGPT API / Developer Agent を有効化</span>
+        </label>
+      </div>
+
+      <div>
         <label>速さ: <span id="speedValue">1.0</span></label>
         <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0">
       </div>
@@ -787,6 +794,38 @@ function createStreamRenderer(contentDiv, getTextFn) {
   }
 
   return { schedule, paint, cancel };
+}
+
+async function loadAppSettings() {
+  try {
+    const res = await fetch("/app_settings");
+    const settings = await res.json();
+
+    const toggle = document.getElementById("developerAgentToggle");
+    if (toggle) {
+      toggle.checked = !!settings.use_developer_agent;
+    }
+  } catch (e) {
+    console.error("設定読み込み失敗:", e);
+  }
+}
+
+async function saveAppSettings() {
+  try {
+    const toggle = document.getElementById("developerAgentToggle");
+
+    await fetch("/app_settings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        use_developer_agent: !!toggle?.checked,
+      }),
+    });
+  } catch (e) {
+    console.error("設定保存失敗:", e);
+  }
 }
 
 /* ===== 送信 ===== */
@@ -1319,6 +1358,18 @@ async function speak(text) {
 initChats();
 initVoiceUI();
 bindGuiEditor();
+
+loadAppSettings();
+
+const developerAgentToggle =
+    document.getElementById("developerAgentToggle");
+
+if (developerAgentToggle) {
+    developerAgentToggle.addEventListener(
+        "change",
+        saveAppSettings
+    );
+}
 
 /* ===== サイドバー幅リサイズ ===== */
 (() => {

@@ -3,6 +3,27 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from prompts import build_messages
+from dev_assistant.developer_agent import (
+    ask_developer_agent,
+    propose_archive_update,
+)
+from dev_assistant.dev_mode import DevMode
+from dev_assistant.archive_manager import append_archive
+from dev_assistant.pending_archive import (
+    load_pending_update,
+    clear_pending_update,
+)
+from dev_assistant.git_tools import (
+    get_git_status,
+    get_git_diff,
+)
+
+from dev_assistant.check_tools import (
+    py_compile_all,
+)
+from dev_assistant.release_check import (
+    release_check,
+)
 
 import json
 import traceback
@@ -55,6 +76,12 @@ from personality.personality_prompt import build_personality_prompt
 from personality.attitude_analysis import (
     analyze_user_intent_llm,
     schedule_personality_analysis,
+)
+
+from app_settings import (
+    load_app_settings,
+    is_developer_agent_enabled,
+    set_developer_agent_enabled,
 )
 
 # ===== FastAPI App =====
@@ -716,6 +743,8 @@ class AskRequest(BaseModel):
     q: str
     session_id: str
 
+class AppSettingsRequest(BaseModel):
+    use_developer_agent: bool
 
 class ResetRequest(BaseModel):
     session_id: str
@@ -860,6 +889,36 @@ def finalize_interaction(
     if run_attitude:
         schedule_personality_analysis(session_id, user_text, intent=intent)
 
+def is_developer_request(text: str) -> bool:
+    keywords = [
+        "実装",
+        "修正",
+        "改善",
+        "変更",
+        "リファクタ",
+        "レビュー",
+        "コードレビュー",
+        "backend",
+        "llm backend",
+        "OpenAI backend",
+        "エラー修正",
+        "コード変更",
+        "開発相談",
+    ]
+
+    lowered = text.lower()
+
+    return any(keyword.lower() in lowered for keyword in keywords)
+
+@app.get("/app_settings")
+def get_app_settings():
+    return load_app_settings()
+
+@app.post("/app_settings")
+def update_app_settings(req: AppSettingsRequest):
+    return set_developer_agent_enabled(
+        req.use_developer_agent
+    )
 
 # =========================================================
 # endpoints
@@ -869,6 +928,44 @@ def ask(req: AskRequest):
     try:
         q = req.q
         session_id = req.session_id
+
+        if q.startswith("アーカイブ更新案"):
+            completed_work = q.replace("アーカイブ更新案", "", 1).strip()
+
+            if not completed_work:
+                completed_work = "直近のDeveloper Agent実装作業"
+        
+            result = propose_archive_update(completed_work)
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "archive_proposal",
+            }
+
+            def archive_event():
+                yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'archive_proposal', 'personality': {}}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(
+                archive_event(),
+                media_type="text/event-stream",
+            )
+
+        if is_developer_agent_enabled() and is_developer_request(q):
+            result = ask_developer_agent(
+                instruction=q,
+                mode=DevMode.FEATURE,
+            )
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "developer_agent",
+            }
 
         session = sessions.get(session_id)
         if not session:
@@ -965,6 +1062,113 @@ def ask_stream(req: AskRequest):
     q = req.q
     session_id = req.session_id
 
+    if q.startswith("アーカイブ更新案"):
+        completed_work = q.replace("アーカイブ更新案", "", 1).strip()
+
+        if not completed_work:
+            completed_work = "直近のDeveloper Agent実装作業"
+
+        result = propose_archive_update(completed_work)
+
+        def archive_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'archive_proposal', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            archive_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "アーカイブ承認":
+        pending = load_pending_update()
+
+        if not pending.strip():
+            result = "承認待ちのアーカイブ更新案がありません。"
+        else:
+            append_archive(pending)
+            clear_pending_update()
+            result = "アーカイブへ追記しました。"
+
+        def archive_approve_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'archive_approve', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            archive_approve_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "開発チェック":
+        result = py_compile_all()
+
+        def check_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'dev_check', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            check_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "git status":
+        result = get_git_status()
+
+        def git_status_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result or '変更なし'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'git_status', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            git_status_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "git diff":
+        result = get_git_diff()
+
+        def git_diff_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result or '差分なし'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'git_diff', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            git_diff_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "GitHub更新前チェック":
+        result = release_check()
+
+        def release_event():
+            yield f"data: {json.dumps({'type':'replace','text':result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type':'meta','title':'','model':'release_check','personality':{}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            release_event(),
+            media_type="text/event-stream",
+        )
+
+    if is_developer_agent_enabled() and is_developer_request(q):
+        result = ask_developer_agent(
+            instruction=q,
+            mode=DevMode.FEATURE,
+        )
+
+        def developer_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'developer_agent', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            developer_event(),
+            media_type="text/event-stream",
+        )
+
+    session = sessions.get(session_id)
     session = sessions.get(session_id)
     if not session:
         sessions[session_id] = _new_session()
