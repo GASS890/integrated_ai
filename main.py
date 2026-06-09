@@ -32,9 +32,8 @@ from dev_assistant.git_tools import (
 from dev_assistant.check_tools import (
     py_compile_all,
 )
-from dev_assistant.release_check import (
-    release_check,
-)
+from dev_assistant.release_check import release_check
+from dev_assistant.release_candidate import generate_release_candidate_report
 
 import json
 import traceback
@@ -1058,6 +1057,16 @@ def ask(req: AskRequest):
                 media_type="text/event-stream",
             )
 
+        if q.strip() == "リリース候補":
+            result = generate_release_candidate_report()
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "release_candidate",
+            }
+
         if q.strip() == "コードレビュー":
             try:
                 result = review_current_diff()
@@ -1393,6 +1402,19 @@ def ask_stream(req: AskRequest):
 
         return StreamingResponse(
             code_review_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "リリース候補":
+        result = generate_release_candidate_report()
+
+        def release_candidate_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'release_candidate', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            release_candidate_event(),
             media_type="text/event-stream",
         )
 
