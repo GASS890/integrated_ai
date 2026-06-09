@@ -15,6 +15,7 @@ from dev_assistant.pending_archive import (
 )
 from dev_assistant.pending_patch import has_pending_patch, load_pending_patch
 from dev_assistant.safe_apply import apply_pending_patch
+from dev_assistant.code_reviewer import review_current_diff
 from dev_assistant.git_tools import (
     get_git_status,
     get_git_diff,
@@ -977,6 +978,19 @@ def ask(req: AskRequest):
                 media_type="text/event-stream",
             )
 
+        if q.strip() == "コードレビュー":
+            try:
+                result = review_current_diff()
+            except Exception as e:
+                result = f"コードレビューに失敗しました。\n{type(e).__name__}: {e}"
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "code_review",
+            }
+
         if is_developer_agent_enabled() and is_developer_request(q):
             result = ask_developer_agent(
                 instruction=q,
@@ -1205,6 +1219,22 @@ def ask_stream(req: AskRequest):
 
         return StreamingResponse(
             apply_patch_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "コードレビュー":
+        try:
+            result = review_current_diff()
+        except Exception as e:
+            result = f"コードレビューに失敗しました。\n{type(e).__name__}: {e}"
+
+        def code_review_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'code_review', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            code_review_event(),
             media_type="text/event-stream",
         )
 
