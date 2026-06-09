@@ -74,3 +74,30 @@ def commit_all_changes(message: str) -> str:
             "Git commit failed.\n"
             f"{type(e).__name__}: {e}"
         )
+
+def push_to_origin() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "push"],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        return (
+            "Git push completed.\n"
+            f"{result.stdout.strip()}"
+        )
+
+    except subprocess.CalledProcessError as e:
+        return (
+            "Git push failed.\n"
+            f"{e.stderr}"
+        )
+
+    except Exception as e:
+        return (
+            "Git push failed.\n"
+            f"{type(e).__name__}: {e}"
+        )

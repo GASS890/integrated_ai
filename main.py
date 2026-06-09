@@ -25,6 +25,7 @@ from dev_assistant.git_tools import (
     get_git_status,
     get_git_diff,
     commit_all_changes,
+    push_to_origin,
 )
 
 from dev_assistant.check_tools import (
@@ -92,6 +93,7 @@ from app_settings import (
     is_developer_agent_enabled,
     set_developer_agent_enabled,
     is_auto_git_commit_enabled,
+    is_auto_git_push_enabled,
 )
 
 # ===== FastAPI App =====
@@ -1000,6 +1002,20 @@ def ask(req: AskRequest):
                         git_result = commit_all_changes(
                             commit_message
                         )
+
+                        if git_result.startswith("Git commit completed."):
+                            if is_auto_git_push_enabled():
+                                push_result = push_to_origin()
+                                git_result = (
+                                    f"{git_result}\n\n"
+                                    "===== git push result =====\n"
+                                    f"{push_result}"
+                                )
+                            else:
+                                git_result = (
+                                    f"{git_result}\n\n"
+                                    "Git push skipped because auto_git_push is disabled."
+                                )
                     else:
                         git_result = "Auto git commit is disabled."
 
@@ -1266,6 +1282,20 @@ def ask_stream(req: AskRequest):
                     git_result = commit_all_changes(
                         commit_message
                     )
+
+                    if git_result.startswith("Git commit completed."):
+                        if is_auto_git_push_enabled():
+                            push_result = push_to_origin()
+                            git_result = (
+                                f"{git_result}\n\n"
+                                "===== git push result =====\n"
+                                f"{push_result}"
+                            )
+                        else:
+                            git_result = (
+                                f"{git_result}\n\n"
+                                "Git push skipped because auto_git_push is disabled."
+                            )
                 else:
                     git_result = (
                         "Auto git commit is disabled."
