@@ -18,6 +18,10 @@ eval_results.jsonl
 workspace/
 VOICEVOX/
 __pycache__/
+*.pyc
+
+dev_assistant/autonomous_history.json
+dev_assistant/review_history.json
 
 # Backups / old copies
 
