@@ -106,3 +106,87 @@ def get_autonomous_history_report(
     return render_recent_autonomous_history(
         limit=limit
     )
+
+def is_similar_autonomous_work(
+    goal: str,
+    target_file: str | None = None,
+    purpose: str | None = None,
+    limit: int = 10,
+) -> bool:
+    recent_items = get_recent_autonomous_history(limit=limit)
+
+    goal_text = goal.strip().lower()
+    target_text = (target_file or "").strip().lower()
+    purpose_text = (purpose or "").strip().lower()
+
+    for item in recent_items:
+        past_goal = str(item.get("goal", "")).strip().lower()
+        past_target = str(item.get("target_file", "")).strip().lower()
+        past_purpose = str(item.get("purpose", "")).strip().lower()
+
+        if target_text and target_text == past_target:
+            return True
+
+        if purpose_text and _has_text_overlap(
+            purpose_text,
+            past_purpose,
+        ):
+            return True
+
+        if goal_text and _has_text_overlap(
+            goal_text,
+            past_goal,
+        ):
+            return True
+
+    return False
+
+
+def _has_text_overlap(
+    current: str,
+    past: str,
+) -> bool:
+    if not current or not past:
+        return False
+
+    current_tokens = _tokenize_text(current)
+    past_tokens = _tokenize_text(past)
+
+    if not current_tokens or not past_tokens:
+        return False
+
+    overlap = current_tokens & past_tokens
+
+    return len(overlap) >= 3
+
+
+def _tokenize_text(text: str) -> set[str]:
+    separators = [
+        " ",
+        "　",
+        "\n",
+        "\r",
+        "\t",
+        ",",
+        "、",
+        ".",
+        "。",
+        ":",
+        "：",
+        "|",
+        "/",
+        "\\",
+        "-",
+        "_",
+    ]
+
+    normalized = text
+
+    for separator in separators:
+        normalized = normalized.replace(separator, " ")
+
+    return {
+        token
+        for token in normalized.split()
+        if len(token) >= 2
+    }

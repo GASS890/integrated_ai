@@ -15,6 +15,7 @@ from dev_assistant.autonomous_planner import (
 from dev_assistant.autonomous_history import (
     render_recent_autonomous_history,
     save_autonomous_history,
+    is_similar_autonomous_work,
 )
 
 DEFAULT_RELATED_FILES = [
@@ -145,8 +146,22 @@ def propose_autonomous_development(
         mode=DevMode.FEATURE,
     )
 
+    duplicate_warning = ""
+
     try:
         patch = load_pending_patch()
+
+        if is_similar_autonomous_work(
+            goal=goal,
+            target_file=patch.target_file,
+            purpose=patch.purpose,
+        ):
+            duplicate_warning = (
+                "===== duplicate warning =====\n"
+                "Similar autonomous development work was found in recent history.\n"
+                "Please check carefully before approving this patch.\n\n"
+            )
+
         save_autonomous_history(
             goal=goal,
             selected_strategy=plan.selected_strategy,
@@ -161,6 +176,7 @@ def propose_autonomous_development(
         f"{plan.render()}\n\n"
         "===== recent autonomous history =====\n"
         f"{recent_history}\n\n"
+        f"{duplicate_warning}"
         "===== autonomous patch proposal =====\n"
         f"{result}"
     )
