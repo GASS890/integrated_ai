@@ -99,3 +99,10 @@ def render_recent_autonomous_history(
         )
 
     return "\n".join(lines)
+
+def get_autonomous_history_report(
+    limit: int = 10,
+) -> str:
+    return render_recent_autonomous_history(
+        limit=limit
+    )

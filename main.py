@@ -34,6 +34,7 @@ from dev_assistant.check_tools import (
 )
 from dev_assistant.release_check import release_check
 from dev_assistant.release_candidate import generate_release_candidate_report
+from dev_assistant.autonomous_history import get_autonomous_history_report
 
 import json
 import traceback
@@ -1067,6 +1068,16 @@ def ask(req: AskRequest):
                 "mode": "release_candidate",
             }
 
+        if q.strip() == "自律開発履歴":
+            result = get_autonomous_history_report()
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "autonomous_history",
+            }
+
         if q.strip() == "コードレビュー":
             try:
                 result = review_current_diff()
@@ -1415,6 +1426,19 @@ def ask_stream(req: AskRequest):
 
         return StreamingResponse(
             release_candidate_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "自律開発履歴":
+        result = get_autonomous_history_report()
+
+        def autonomous_history_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'autonomous_history', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            autonomous_history_event(),
             media_type="text/event-stream",
         )
 
