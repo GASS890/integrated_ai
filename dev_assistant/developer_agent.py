@@ -17,6 +17,7 @@ from dev_assistant.autonomous_history import (
     save_autonomous_history,
     is_similar_autonomous_work,
 )
+from app_settings import get_autonomous_level
 
 DEFAULT_RELATED_FILES = [
     "llm_client.py",
@@ -133,11 +134,20 @@ def propose_pending_patch(
 def propose_autonomous_development(
     goal: str,
 ) -> str:
+    level = get_autonomous_level()
     recent_history = render_recent_autonomous_history()
 
     plan = build_autonomous_plan(
         f"{goal}\n\nRecent autonomous history:\n{recent_history}"
     )
+
+    if level <= 1:
+        return (
+            f"{plan.render()}\n\n"
+            "===== autonomous level =====\n"
+            "Level 1: plan only. pending_patch was not created."
+        )
+
     instruction = build_developer_instruction_from_plan(plan)
 
     result = propose_pending_patch(
@@ -174,6 +184,8 @@ def propose_autonomous_development(
 
     return (
         f"{plan.render()}\n\n"
+        "===== autonomous level =====\n"
+        f"Level {level}\n\n"
         "===== recent autonomous history =====\n"
         f"{recent_history}\n\n"
         f"{duplicate_warning}"

@@ -9,6 +9,7 @@ DEFAULT_SETTINGS = {
     "use_developer_agent": False,
     "auto_git_commit": False,
     "auto_git_push": False,
+    "autonomous_level": 2,
 }
 
 def is_auto_git_commit_enabled() -> bool:
@@ -63,4 +64,44 @@ def set_auto_git_push_enabled(enabled: bool) -> dict:
     settings = load_app_settings()
     settings["auto_git_push"] = bool(enabled)
     save_app_settings(settings)
+    return settings
+
+def get_autonomous_level() -> int:
+    settings = load_app_settings()
+
+    try:
+        level = int(
+            settings.get(
+                "autonomous_level",
+                2,
+            )
+        )
+    except Exception:
+        level = 2
+
+    return max(
+        1,
+        min(
+            level,
+            3,
+        ),
+    )
+
+def set_autonomous_level(
+    level: int,
+) -> dict:
+    settings = load_app_settings()
+
+    level = max(
+        1,
+        min(
+            int(level),
+            3,
+        ),
+    )
+
+    settings["autonomous_level"] = level
+
+    save_app_settings(settings)
+
     return settings
