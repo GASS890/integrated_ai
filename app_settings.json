@@ -1,3 +1,6 @@
 {
-  "use_developer_agent": true
+  "use_developer_agent": true,
+  "auto_git_commit": false,
+  "auto_git_push": false,
+  "autonomous_level": 3
 }
