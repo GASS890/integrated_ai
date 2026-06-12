@@ -95,6 +95,8 @@ from app_settings import (
     set_developer_agent_enabled,
     is_auto_git_commit_enabled,
     is_auto_git_push_enabled,
+    get_autonomous_level,
+    set_autonomous_level,
 )
 
 # ===== FastAPI App =====
@@ -967,6 +969,42 @@ def ask(req: AskRequest):
                 media_type="text/event-stream",
             )
 
+        if q.startswith("自律開発レベル "):
+            value = q.replace("自律開発レベル ", "", 1).strip()
+
+            try:
+                level = int(value)
+                settings = set_autonomous_level(level)
+                result = (
+                    "自律開発レベルを更新しました。\n"
+                    f"autonomous_level: {settings.get('autonomous_level')}"
+                )
+            except Exception as e:
+                result = (
+                    "自律開発レベルの更新に失敗しました。\n"
+                    f"{type(e).__name__}: {e}"
+                )
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "autonomous_level",
+            }
+
+        if q.strip() == "自律開発レベル":
+            result = (
+                "現在の自律開発レベル:\n"
+                f"{get_autonomous_level()}"
+            )
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "autonomous_level",
+            }
+
         if q.startswith("自律開発 "):
             goal = q.replace("自律開発 ", "", 1).strip()
 
@@ -1361,6 +1399,48 @@ def ask_stream(req: AskRequest):
 
         return StreamingResponse(
             apply_patch_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.startswith("自律開発レベル "):
+        value = q.replace("自律開発レベル ", "", 1).strip()
+
+        try:
+            level = int(value)
+            settings = set_autonomous_level(level)
+            result = (
+                "自律開発レベルを更新しました。\n"
+                f"autonomous_level: {settings.get('autonomous_level')}"
+            )
+        except Exception as e:
+            result = (
+                "自律開発レベルの更新に失敗しました。\n"
+                f"{type(e).__name__}: {e}"
+            )
+
+        def autonomous_level_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'autonomous_level', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            autonomous_level_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.strip() == "自律開発レベル":
+        result = (
+            "現在の自律開発レベル:\n"
+            f"{get_autonomous_level()}"
+        )
+
+        def autonomous_level_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'autonomous_level', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            autonomous_level_event(),
             media_type="text/event-stream",
         )
 

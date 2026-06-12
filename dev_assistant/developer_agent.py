@@ -182,6 +182,28 @@ def propose_autonomous_development(
     except Exception:
         pass
 
+    pending_patch_preview = ""
+
+    if level >= 3:
+        try:
+            patch = load_pending_patch()
+            pending_patch_preview = (
+                "\n\n"
+                "===== pending patch preview =====\n"
+                f"対象ファイル: {patch.target_file}\n\n"
+                f"目的: {patch.purpose}\n\n"
+                "----- 変更前 -----\n"
+                f"{patch.before_code}\n\n"
+                "----- 変更後 -----\n"
+                f"{patch.after_code}"
+            )
+        except Exception as e:
+            pending_patch_preview = (
+                "\n\n"
+                "===== pending patch preview =====\n"
+                f"Failed to load pending patch: {type(e).__name__}: {e}"
+            )
+
     return (
         f"{plan.render()}\n\n"
         "===== autonomous level =====\n"
@@ -191,4 +213,5 @@ def propose_autonomous_development(
         f"{duplicate_warning}"
         "===== autonomous patch proposal =====\n"
         f"{result}"
+        f"{pending_patch_preview}"
     )
