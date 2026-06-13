@@ -36,7 +36,8 @@ def load_app_settings() -> dict:
         settings.update(data)
         return settings
 
-    except Exception:
+    except Exception as e:
+        print(f"Error loading app settings from {SETTINGS_FILE}: {e}")
         return DEFAULT_SETTINGS.copy()
 
 def save_app_settings(settings: dict) -> None:

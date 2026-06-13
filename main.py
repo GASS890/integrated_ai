@@ -8,6 +8,9 @@ from dev_assistant.developer_agent import (
     propose_archive_update,
     propose_pending_patch,
     propose_autonomous_development,
+    reflect_improvement_to_pending_patch,
+    reflect_saved_improvement_to_pending_patch,
+    save_improvement_text,
 )
 from dev_assistant.dev_mode import DevMode
 from dev_assistant.archive_manager import append_archive
@@ -15,7 +18,11 @@ from dev_assistant.pending_archive import (
     load_pending_update,
     clear_pending_update,
 )
-from dev_assistant.pending_patch import has_pending_patch, load_pending_patch
+from dev_assistant.pending_patch import (
+    has_pending_patch,
+    load_pending_patch,
+    delete_pending_patch,
+)
 from dev_assistant.safe_apply import apply_pending_patch_with_compile_check
 from dev_assistant.code_reviewer import (
     review_current_diff,
@@ -925,6 +932,55 @@ def is_developer_request(text: str) -> bool:
 
     return any(keyword.lower() in lowered for keyword in keywords)
 
+def is_improvement_proposal_text(
+    text: str,
+) -> bool:
+    normalized = (
+        text.replace(" ", "")
+        .replace("　", "")
+    )
+
+    target_patterns = [
+        "変更対象ファイル",
+        "対象ファイル",
+    ]
+
+    purpose_patterns = [
+        "変更目的",
+        "目的",
+    ]
+
+    before_patterns = [
+        "変更前コード",
+        "変更前",
+        "-----変更前-----",
+    ]
+
+    after_patterns = [
+        "変更後コード",
+        "変更後",
+        "-----変更後-----",
+    ]
+
+    return (
+        any(
+            pattern in normalized
+            for pattern in target_patterns
+        )
+        and any(
+            pattern in normalized
+            for pattern in purpose_patterns
+        )
+        and any(
+            pattern in normalized
+            for pattern in before_patterns
+        )
+        and any(
+            pattern in normalized
+            for pattern in after_patterns
+        )
+    )
+
 @app.get("/app_settings")
 def get_app_settings():
     return load_app_settings()
@@ -1020,6 +1076,57 @@ def ask(req: AskRequest):
                 "mode": "autonomous_development",
             }
 
+        if is_improvement_proposal_text(q):
+            save_result = save_improvement_text(q)
+
+            try:
+                reflect_result = reflect_saved_improvement_to_pending_patch()
+                result = (
+                    f"{save_result}\n\n"
+                    "===== auto reflect result =====\n"
+                    f"{reflect_result}"
+                )
+            except Exception as e:
+                result = (
+                    f"{save_result}\n\n"
+                    "===== auto reflect failed =====\n"
+                    f"{type(e).__name__}: {e}"
+                )
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "auto_save_and_reflect_improvement",
+            }
+
+        if q.startswith("改善案保存"):
+            improvement_text = q.replace("改善案保存", "", 1).strip()
+
+            result = save_improvement_text(improvement_text)
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "save_improvement",
+            }
+
+        if q.startswith("改善案反映"):
+            improvement_text = q.replace("改善案反映", "", 1).strip()
+
+            if not improvement_text:
+                result = "改善案の内容が空です。"
+            else:
+                result = reflect_improvement_to_pending_patch(improvement_text)
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "reflect_improvement",
+            }
+
         if q.startswith("変更提案 "):
             instruction = q.replace("変更提案 ", "", 1).strip()
 
@@ -1035,6 +1142,27 @@ def ask(req: AskRequest):
 
             return StreamingResponse(
                 propose_patch_event(),
+                media_type="text/event-stream",
+            )
+
+        if q.strip() == "変更却下":
+            deleted = delete_pending_patch()
+
+            if deleted:
+                result = (
+                    "保留中の変更案を却下しました。\n"
+                    "pending_patch.json を削除しました。"
+                )
+            else:
+                result = "却下する変更案はありません。"
+    
+            def reject_patch_event():
+                yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'reject_patch', 'personality': {}}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+    
+            return StreamingResponse(
+                reject_patch_event(),
                 media_type="text/event-stream",
             )
 
@@ -1085,16 +1213,6 @@ def ask(req: AskRequest):
 
             except Exception as e:
                 result = f"変更適用に失敗しました。\n{type(e).__name__}: {e}"
-
-            def apply_patch_event():
-                yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
-                yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'safe_apply', 'personality': {}}, ensure_ascii=False)}\n\n"
-                yield "data: [DONE]\n\n"
-
-            return StreamingResponse(
-                apply_patch_event(),
-                media_type="text/event-stream",
-            )
 
         if q.strip() == "リリース候補":
             result = generate_release_candidate_report()
@@ -1202,8 +1320,27 @@ def ask(req: AskRequest):
         raw_answer = call_chat(messages, model, options=opt)
         answer = format_answer(q, raw_answer)
 
-        finalize_interaction(session_id, session, q, answer, intent=intent)
+        if is_improvement_proposal_text(answer):
+            save_result = save_improvement_text(answer)
 
+            try:
+                reflect_result = reflect_saved_improvement_to_pending_patch()
+                answer = (
+                    f"{answer}\n\n"
+                    "===== auto saved improvement =====\n"
+                    f"{save_result}\n\n"
+                    "===== auto reflected pending patch =====\n"
+                    f"{reflect_result}\n\n"
+                    "次に「変更承認」または「変更却下」を選んでください。"
+                )
+            except Exception as e:
+                answer = (
+                    f"{answer}\n\n"
+                    "===== auto improvement save failed =====\n"
+                    f"{type(e).__name__}: {e}"
+                )
+
+        finalize_interaction(session_id, session, q, answer, intent=intent)
         return {
             "answer": answer,
             "title": session.get("title", ""),
@@ -1338,6 +1475,24 @@ def ask_stream(req: AskRequest):
             media_type="text/event-stream",
         )
 
+        if q.strip() == "変更却下":
+            deleted = delete_pending_patch()
+
+            if deleted:
+                result = (
+                    "保留中の変更案を却下しました。\n"
+                    "pending_patch.json を削除しました。"
+                )
+            else:
+                result = "却下する変更案はありません。"
+
+            return {
+                "answer": result,
+                "title": "",
+                "personality": {},
+                "mode": "reject_patch",
+            }
+
     if q.strip() == "変更承認":
         try:
             patch = load_pending_patch()
@@ -1459,6 +1614,91 @@ def ask_stream(req: AskRequest):
 
         return StreamingResponse(
             autonomous_event(),
+            media_type="text/event-stream",
+        )
+
+    if is_improvement_proposal_text(q):
+        save_result = save_improvement_text(q)
+
+        try:
+            reflect_result = reflect_saved_improvement_to_pending_patch()
+            result = (
+                f"{save_result}\n\n"
+                "===== auto reflect result =====\n"
+                f"{reflect_result}"
+            )
+        except Exception as e:
+            result = (
+                f"{save_result}\n\n"
+                "===== auto reflect failed =====\n"
+                f"{type(e).__name__}: {e}"
+            )
+
+        def auto_save_improvement_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'auto_save_and_reflect_improvement', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            auto_save_improvement_event(),
+            media_type="text/event-stream",
+        )
+    if q.startswith("改善案保存"):
+        improvement_text = q.replace("改善案保存", "", 1).strip()
+
+        result = save_improvement_text(improvement_text)
+
+        def save_improvement_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'save_improvement', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            save_improvement_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.startswith("改善案反映"):
+        improvement_text = q.replace("改善案反映", "", 1).strip()
+
+        try:
+            if improvement_text:
+                result = reflect_improvement_to_pending_patch(
+                    improvement_text
+                )
+            else:
+                result = reflect_saved_improvement_to_pending_patch()
+        except Exception as e:
+            result = (
+                "改善案の反映に失敗しました。\n"
+                f"{type(e).__name__}: {e}"
+            )
+
+        def reflect_improvement_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'reflect_improvement', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            reflect_improvement_event(),
+            media_type="text/event-stream",
+        )
+
+    if q.startswith("改善案反映"):
+        improvement_text = q.replace("改善案反映", "", 1).strip()
+
+        if not improvement_text:
+            result = "改善案の内容が空です。"
+        else:
+            result = reflect_improvement_to_pending_patch(improvement_text)
+
+        def reflect_improvement_event():
+            yield f"data: {json.dumps({'type': 'replace', 'text': result}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'title': '', 'model': 'reflect_improvement', 'personality': {}}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            reflect_improvement_event(),
             media_type="text/event-stream",
         )
 

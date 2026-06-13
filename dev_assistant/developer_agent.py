@@ -8,6 +8,11 @@ from dev_assistant.patch_parser import parse_patch_response
 from dev_assistant.pending_patch import save_pending_patch, load_pending_patch
 from dev_assistant.file_selector import select_related_files
 from dev_assistant.patch_scorer import score_patch
+from dev_assistant.improvement_store import (
+    clear_pending_improvement,
+    load_pending_improvement,
+    save_pending_improvement,
+)
 from dev_assistant.autonomous_planner import (
     build_autonomous_plan,
     build_developer_instruction_from_plan,
@@ -215,3 +220,81 @@ def propose_autonomous_development(
         f"{result}"
         f"{pending_patch_preview}"
     )
+
+def normalize_improvement_text(
+    text: str,
+) -> str:
+    return (
+        text.replace("1. 変更対象ファイル", "変更対象ファイル")
+        .replace("2. 変更目的", "変更目的")
+        .replace("3. 変更前コード", "変更前コード")
+        .replace("4. 変更後コード", "変更後コード")
+        .replace("5. 動作確認コマンド", "動作確認コマンド")
+        .replace("6. 注意点", "注意点")
+    )
+
+def reflect_improvement_to_pending_patch(
+    improvement_text: str,
+) -> str:
+    normalized_text = normalize_improvement_text(
+        improvement_text
+    )
+
+    patch = parse_patch_response(
+        normalized_text
+    )
+
+    if patch is None:
+        return (
+            "改善案の解析に失敗しました。\n\n"
+            "以下の形式が含まれているか確認してください。\n"
+            "- 変更対象ファイル\n"
+            "- 変更目的\n"
+            "- 変更前コード\n"
+            "- 変更後コード\n\n"
+            "===== normalized improvement text head =====\n"
+            f"{normalized_text[:1000]}"
+        )
+
+    save_pending_patch(patch)
+
+    score = score_patch(
+        purpose=patch.purpose,
+        before_code=patch.before_code,
+        after_code=patch.after_code,
+    )
+
+    return (
+        "改善案を pending_patch.json に反映しました。\n\n"
+        f"対象ファイル: {patch.target_file}\n"
+        f"目的: {patch.purpose}\n\n"
+        "===== patch score =====\n"
+        f"{score.render()}\n\n"
+        "次に「変更案確認」→「変更承認」で適用できます。"
+    )
+
+def save_improvement_text(
+    improvement_text: str,
+) -> str:
+    if not improvement_text.strip():
+        return "保存する改善案の内容が空です。"
+
+    save_pending_improvement(improvement_text)
+
+    return (
+        "改善案を保存しました。\n\n"
+        "次に「改善案反映」と入力すると、"
+        "保存済みの改善案を pending_patch.json に反映します。"
+    )
+
+
+def reflect_saved_improvement_to_pending_patch() -> str:
+    improvement_text = load_pending_improvement()
+
+    result = reflect_improvement_to_pending_patch(
+        improvement_text
+    )
+
+    clear_pending_improvement()
+
+    return result

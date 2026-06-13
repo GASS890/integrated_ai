@@ -56,3 +56,12 @@ def clear_pending_patch() -> None:
 
 def has_pending_patch() -> bool:
     return PENDING_PATCH_PATH.exists()
+
+
+def delete_pending_patch() -> bool:
+    if not PENDING_PATCH_PATH.exists():
+        return False
+
+    PENDING_PATCH_PATH.unlink()
+
+    return True
