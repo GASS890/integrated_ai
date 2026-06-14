@@ -1,0 +1,16 @@
+{
+  "version": "v0.99-test",
+  "commit_hash": "0991c73",
+  "created_at": "20260614_181444",
+  "patches": [
+    {
+      "target_file": "workspace/manual_apply_test.py",
+      "purpose": "GitHub自動反映フローのテスト用文字列を変更する。"
+    }
+  ],
+  "compile_result": "OK: workspace/manual_apply_test.py",
+  "commit_result": "Git commit completed.\nCommit: 0991c73",
+  "tag_result": "Git tag created: v0.99-test",
+  "push_result": "Git push completed.\n",
+  "tag_push_result": "Git tag pushed: v0.99-test"
+}

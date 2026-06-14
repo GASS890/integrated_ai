@@ -4,7 +4,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from dev_assistant.auto_change_flow import propose_change, approve_change
-from dev_assistant.manual_change_flow import apply_manual_change_plan
+from dev_assistant.manual_change_flow import (
+    apply_manual_change_plan,
+    restore_from_change_history,
+)
 from prompts import build_messages
 from dev_assistant.developer_agent import (
     ask_developer_agent,
@@ -1012,6 +1015,20 @@ def ask(req: AskRequest):
                     "answer": f"改善案適用失敗: {e}"
                 }
 
+        if q.startswith("バージョン復元:"):
+            try:
+                version = q.replace("バージョン復元:", "", 1).strip()
+                result = restore_from_change_history(version)
+
+                return {
+                    "answer": result
+                }
+
+            except Exception as e:
+                return {
+                    "answer": f"バージョン復元失敗: {e}"
+                }
+
         if q.startswith("アーカイブ更新案"):
             completed_work = q.replace("アーカイブ更新案", "", 1).strip()
 
@@ -1399,8 +1416,21 @@ def ask_stream(req: AskRequest):
             media_type="text/event-stream"
         )
 
-    if q.startswith("アーカイブ更新案"):
-        completed_work = q.replace("アーカイブ更新案", "", 1).strip()
+    if q.startswith("バージョン復元:"):
+        version = q.replace("バージョン復元:", "", 1).strip()
+        result = restore_from_change_history(version)
+
+        def restore_event():
+            yield f"data: {json.dumps({'type': 'delta', 'text': result}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            restore_event(),
+            media_type="text/event-stream"
+        )
+
+        if q.startswith("アーカイブ更新案"):
+            completed_work = q.replace("アーカイブ更新案", "", 1).strip()
 
         if not completed_work:
             completed_work = "直近のDeveloper Agent実装作業"

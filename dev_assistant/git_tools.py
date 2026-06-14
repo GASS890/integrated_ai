@@ -1,5 +1,5 @@
-import subprocess
 import logging
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,6 @@ def get_git_status() -> str:
             text=True,
             encoding="utf-8",
         )
-        logger.debug("git status output: %s", result.stdout.strip())
         return result.stdout.strip()
 
     except Exception as e:
@@ -33,7 +32,6 @@ def get_git_diff(target_file: str | None = None) -> str:
             text=True,
             encoding="utf-8",
         )
-        logger.debug("git diff output: %s", result.stdout.strip())
         return result.stdout.strip()
 
     except Exception as e:
@@ -41,55 +39,18 @@ def get_git_diff(target_file: str | None = None) -> str:
         return f"[git diff error] {e}"
 
 
-def commit_all_changes(message: str) -> str:
-    try:
-        subprocess.run(
-            ["git", "add", "."],
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        )
-        logger.info("git add . executed successfully")
+def get_git_diff_for_files(file_paths: list[str]) -> str:
+    parts = []
 
-        subprocess.run(
-            ["git", "commit", "-m", message],
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        )
-        logger.info("git commit executed successfully with message: %s", message)
-
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
+    for path in file_paths:
+        diff = get_git_diff(path)
+        parts.append(
+            f"===== Git Diff: {path} =====\n"
+            f"{diff or '(no diff)'}"
         )
 
-        commit_hash = result.stdout.strip()
-        logger.info("git commit hash: %s", commit_hash)
+    return "\n\n".join(parts)
 
-        return (
-            "Git commit completed.\n"
-            f"Commit: {commit_hash}"
-        )
-
-    except subprocess.CalledProcessError as e:
-        logger.error("Git commit failed: %s", e.stderr, exc_info=True)
-        return (
-            "Git commit failed.\n"
-            f"{e.stderr}"
-        )
-
-    except Exception as e:
-        logger.error("Git commit failed: %s", e, exc_info=True)
-        return (
-            "Git commit failed.\n"
-            f"{type(e).__name__}: {e}"
-        )
 
 def get_current_commit_hash() -> str:
     try:
@@ -107,6 +68,44 @@ def get_current_commit_hash() -> str:
         return ""
 
 
+def commit_all_changes(message: str) -> str:
+    try:
+        subprocess.run(
+            ["git", "add", "."],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        commit_hash = get_current_commit_hash()
+
+        return (
+            "Git commit completed.\n"
+            f"Commit: {commit_hash}"
+        )
+
+    except subprocess.CalledProcessError as e:
+        return (
+            "Git commit failed.\n"
+            f"{e.stderr}"
+        )
+
+    except Exception as e:
+        return (
+            "Git commit failed.\n"
+            f"{type(e).__name__}: {e}"
+        )
+
+
 def git_tag_exists(version: str) -> bool:
     try:
         result = subprocess.run(
@@ -118,9 +117,17 @@ def git_tag_exists(version: str) -> bool:
         )
         return result.stdout.strip() == version
 
-    except subprocess.CalledProcessError as e:
-        logger.error("Git tag check failed: %s", e.stderr, exc_info=True)
+    except subprocess.CalledProcessError:
         return False
+
+
+def suggest_next_version(version: str) -> str:
+    index = 1
+
+    while git_tag_exists(f"{version}-{index}"):
+        index += 1
+
+    return f"{version}-{index}"
 
 
 def create_git_tag(version: str) -> str:
@@ -135,13 +142,31 @@ def create_git_tag(version: str) -> str:
             text=True,
             encoding="utf-8",
         )
-        logger.info("git tag created: %s", version)
+
         return f"Git tag created: {version}"
 
     except subprocess.CalledProcessError as e:
-        logger.error("Git tag failed: %s", e.stderr, exc_info=True)
         return (
             "Git tag failed.\n"
+            f"{e.stderr}"
+        )
+
+
+def delete_git_tag(version: str) -> str:
+    try:
+        subprocess.run(
+            ["git", "tag", "-d", version],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        return f"Git tag deleted locally: {version}"
+
+    except subprocess.CalledProcessError as e:
+        return (
+            "Git tag delete failed.\n"
             f"{e.stderr}"
         )
 
@@ -155,8 +180,6 @@ def push_to_origin() -> str:
             text=True,
             encoding="utf-8",
         )
-        logger.info("git push executed successfully")
-        logger.debug("git push output: %s", result.stdout.strip())
 
         return (
             "Git push completed.\n"
@@ -164,14 +187,12 @@ def push_to_origin() -> str:
         )
 
     except subprocess.CalledProcessError as e:
-        logger.error("Git push failed: %s", e.stderr, exc_info=True)
         return (
             "Git push failed.\n"
             f"{e.stderr}"
         )
 
     except Exception as e:
-        logger.error("Git push failed: %s", e, exc_info=True)
         return (
             "Git push failed.\n"
             f"{type(e).__name__}: {e}"
@@ -187,11 +208,10 @@ def push_git_tag(version: str) -> str:
             text=True,
             encoding="utf-8",
         )
-        logger.info("git tag pushed: %s", version)
+
         return f"Git tag pushed: {version}"
 
     except subprocess.CalledProcessError as e:
-        logger.error("Git tag push failed: %s", e.stderr, exc_info=True)
         return (
             "Git tag push failed.\n"
             f"{e.stderr}"
