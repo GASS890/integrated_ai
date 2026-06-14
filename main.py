@@ -714,6 +714,7 @@ def _new_session():
         "messages": [],
         "created_at": time.time(),
         "personality_id": personality_id,
+        "chat_type": "normal",
     }
 
     _ensure_personality(session)
@@ -744,6 +745,21 @@ def save_sessions_to_file(sessions_dict: dict):
 
 sessions_lock = Lock()
 memories_lock = Lock()
+
+if DEVELOPER_SESSION_ID not in sessions:
+    sessions[DEVELOPER_SESSION_ID] = {
+        "title": DEVELOPER_SESSION_TITLE,
+        "title_fixed": True,
+        "summary": "",
+        "messages": [],
+        "created_at": time.time(),
+        "personality_id": "default",
+        "chat_type": "developer",
+        "locked": True,
+        "deletable": False,
+    }
+    save_sessions_to_file(sessions)
+
 
 
 def persist_sessions():
