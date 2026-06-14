@@ -83,6 +83,41 @@ DEVELOPER_SESSION_ID = "**developer_chat**"
 DEVELOPER_SESSION_TITLE = "🛠 開発・改善専用"
 
 def is_developer_chat(session_id: str | None) -> bool: return session_id == DEVELOPER_SESSION_ID
+def handle_code_lookup_command(q: str) -> str:
+    lines = [line.strip() for line in q.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return "使い方:\nコード取得:\nmain.py\n検索キーワード"
+
+    target_path = lines[1]
+    keyword = lines[2] if len(lines) >= 3 else ""
+    context = 25
+
+    if not os.path.exists(target_path):
+        return f"ファイルが見つかりません: {target_path}"
+
+    with open(target_path, "r", encoding="utf-8") as f:
+        file_lines = f.read().splitlines()
+
+    if keyword:
+        hit_index = None
+        for i, line in enumerate(file_lines):
+            if keyword in line:
+                hit_index = i
+                break
+        if hit_index is None:
+            return f"キーワードが見つかりません: {keyword}"
+
+        start = max(0, hit_index - context)
+        end = min(len(file_lines), hit_index + context + 1)
+    else:
+        start = 0
+        end = min(len(file_lines), 80)
+
+    body = []
+    for i in range(start, end):
+        body.append(f"{i + 1}: {file_lines[i]}")
+
+    return "===== Code Lookup =====\nfile: " + target_path + "\nkeyword: " + keyword + "\n\n```text\n" + "\n".join(body) + "\n```"
 
 from app_settings import (
     load_app_settings,
@@ -2092,3 +2127,4 @@ def tts(req: TTSRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
