@@ -1039,6 +1039,10 @@ def dev_approve_change():
 # =========================================================
 @app.post("/ask")
 def ask(req: AskRequest):
+    # phase0 code lookup command
+    if req.message.startswith("コード取得:"):
+        return {"reply": handle_code_lookup_command(req.message)}
+
     try:
         q = req.message
         session_id = req.session_id
@@ -1445,6 +1449,12 @@ def new_session():
 
 @app.post("/ask_stream")
 def ask_stream(req: AskRequest):
+    # phase0 stream code lookup command
+    if req.message.startswith("コード取得:"):
+        lookup_text = handle_code_lookup_command(req.message)
+        payload = json.dumps({"delta": lookup_text}, ensure_ascii=False)
+        return StreamingResponse(iter([f"data: {payload}\n\n", "data: [DONE]\n\n"]), media_type="text/event-stream")
+
     q = req.message
     session_id = req.session_id
 
