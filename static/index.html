@@ -1118,6 +1118,15 @@ async function newChat() {
 /* ===== 一覧描画 ===== */
 function renderChatList() {
   chatList.innerHTML = "";
+
+  if (!chats.some(c => c.id === "__developer_chat__")) {
+    chats.unshift({
+      id: "__developer_chat__",
+      title: "🛠 開発・改善専用",
+      titleGenerated: true
+    });
+  }
+
   chats.forEach(c => {
     const row = document.createElement("div");
     row.className = "chat-item" + (c.id === sessionId ? " active" : "");
