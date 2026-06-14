@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Response
+﻿from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -731,6 +731,8 @@ def persist_memories():
         save_memory_db(memory_db, MEMORY_FILE)
 
 _loaded = load_sessions_from_file()
+
+if DEVELOPER_SESSION_ID not in _loaded: _loaded[DEVELOPER_SESSION_ID] = {"title": DEVELOPER_SESSION_TITLE, "title_fixed": True, "summary": "", "messages": [], "created_at": time.time(), "personality_id": "default", "chat_type": "developer"}
 
 _now = time.time()
 for sid, s in _loaded.items():
