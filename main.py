@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+from dev_assistant.auto_change_flow import propose_change, approve_change
+from dev_assistant.manual_change_flow import apply_manual_change_plan
 from prompts import build_messages
 from dev_assistant.developer_agent import (
     ask_developer_agent,
@@ -14,31 +17,14 @@ from dev_assistant.developer_agent import (
 )
 from dev_assistant.dev_mode import DevMode
 from dev_assistant.archive_manager import append_archive
-from dev_assistant.pending_archive import (
-    load_pending_update,
-    clear_pending_update,
-)
-from dev_assistant.pending_patch import (
-    has_pending_patch,
-    load_pending_patch,
-    delete_pending_patch,
-)
+from dev_assistant.pending_archive import load_pending_update, clear_pending_update
+from dev_assistant.pending_patch import has_pending_patch, load_pending_patch, delete_pending_patch
 from dev_assistant.safe_apply import apply_pending_patch_with_compile_check
-from dev_assistant.code_reviewer import (
-    review_current_diff,
-    is_review_approved,
-)
+from dev_assistant.code_reviewer import review_current_diff, is_review_approved
 from dev_assistant.commit_message_generator import generate_commit_message
-from dev_assistant.git_tools import (
-    get_git_status,
-    get_git_diff,
-    commit_all_changes,
-    push_to_origin,
-)
+from dev_assistant.git_tools import get_git_status, get_git_diff, commit_all_changes, push_to_origin
 
-from dev_assistant.check_tools import (
-    py_compile_all,
-)
+from dev_assistant.check_tools import py_compile_all
 from dev_assistant.release_check import release_check
 from dev_assistant.release_candidate import generate_release_candidate_report
 from dev_assistant.autonomous_history import get_autonomous_history_report
@@ -85,16 +71,10 @@ from memory_store import (
     delete_memory,
 )
 
-from personality.state_manager import (
-    _init_personality,
-    _ensure_personality,
-)
+from personality.state_manager import _init_personality, _ensure_personality
 from personality.affinity import update_personality
 from personality.personality_prompt import build_personality_prompt
-from personality.attitude_analysis import (
-    analyze_user_intent_llm,
-    schedule_personality_analysis,
-)
+from personality.attitude_analysis import analyze_user_intent_llm, schedule_personality_analysis
 
 from app_settings import (
     load_app_settings,
@@ -762,8 +742,13 @@ memory_db = load_memory_db(MEMORY_FILE)
 # Request Body
 # =========================================================
 class AskRequest(BaseModel):
-    q: str
-    session_id: str
+    message: str
+    session_id: str | None = None
+
+
+class DevChangeRequest(BaseModel):
+    request: str
+    files: list[str]
 
 class AppSettingsRequest(BaseModel):
     use_developer_agent: bool
@@ -991,14 +976,41 @@ def update_app_settings(req: AppSettingsRequest):
         req.use_developer_agent
     )
 
+@app.post("/dev/propose_change")
+def dev_propose_change(req: DevChangeRequest):
+    return {
+        "result": propose_change(req.request, req.files)
+    }
+
+
+@app.post("/dev/approve_change")
+def dev_approve_change():
+    return {
+        "result": approve_change()
+    }
+
 # =========================================================
 # endpoints
 # =========================================================
 @app.post("/ask")
 def ask(req: AskRequest):
     try:
-        q = req.q
+        q = req.message
         session_id = req.session_id
+
+        if q.startswith("改善案反映:"):
+            try:
+                plan_text = q.replace("改善案反映:", "", 1).strip()
+                result = apply_manual_change_plan(plan_text)
+
+                return {
+                    "answer": result
+                }
+
+            except Exception as e:
+                return {
+                    "answer": f"改善案適用失敗: {e}"
+                }
 
         if q.startswith("アーカイブ更新案"):
             completed_work = q.replace("アーカイブ更新案", "", 1).strip()
@@ -1371,8 +1383,21 @@ def new_session():
 
 @app.post("/ask_stream")
 def ask_stream(req: AskRequest):
-    q = req.q
+    q = req.message
     session_id = req.session_id
+
+    if q.startswith("改善案反映:"):
+        plan_text = q.replace("改善案反映:", "", 1).strip()
+        result = apply_manual_change_plan(plan_text)
+
+        def manual_change_event():
+            yield f"data: {json.dumps({'type': 'delta', 'text': result}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            manual_change_event(),
+            media_type="text/event-stream"
+        )
 
     if q.startswith("アーカイブ更新案"):
         completed_work = q.replace("アーカイブ更新案", "", 1).strip()

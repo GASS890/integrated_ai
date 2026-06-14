@@ -20,10 +20,15 @@ def get_git_status() -> str:
         return f"[git status error] {e}"
 
 
-def get_git_diff() -> str:
+def get_git_diff(target_file: str | None = None) -> str:
     try:
+        cmd = ["git", "diff"]
+
+        if target_file:
+            cmd += ["--", target_file]
+
         result = subprocess.run(
-            ["git", "diff"],
+            cmd,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -86,6 +91,60 @@ def commit_all_changes(message: str) -> str:
             f"{type(e).__name__}: {e}"
         )
 
+def get_current_commit_hash() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        return result.stdout.strip()
+
+    except subprocess.CalledProcessError as e:
+        logger.error("Get commit hash failed: %s", e.stderr, exc_info=True)
+        return ""
+
+
+def git_tag_exists(version: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "tag", "--list", version],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        return result.stdout.strip() == version
+
+    except subprocess.CalledProcessError as e:
+        logger.error("Git tag check failed: %s", e.stderr, exc_info=True)
+        return False
+
+
+def create_git_tag(version: str) -> str:
+    try:
+        if git_tag_exists(version):
+            return f"Git tag already exists: {version}"
+
+        subprocess.run(
+            ["git", "tag", version],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        logger.info("git tag created: %s", version)
+        return f"Git tag created: {version}"
+
+    except subprocess.CalledProcessError as e:
+        logger.error("Git tag failed: %s", e.stderr, exc_info=True)
+        return (
+            "Git tag failed.\n"
+            f"{e.stderr}"
+        )
+
 
 def push_to_origin() -> str:
     try:
@@ -116,4 +175,24 @@ def push_to_origin() -> str:
         return (
             "Git push failed.\n"
             f"{type(e).__name__}: {e}"
+        )
+
+
+def push_git_tag(version: str) -> str:
+    try:
+        subprocess.run(
+            ["git", "push", "origin", version],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        logger.info("git tag pushed: %s", version)
+        return f"Git tag pushed: {version}"
+
+    except subprocess.CalledProcessError as e:
+        logger.error("Git tag push failed: %s", e.stderr, exc_info=True)
+        return (
+            "Git tag push failed.\n"
+            f"{e.stderr}"
         )

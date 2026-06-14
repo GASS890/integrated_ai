@@ -852,10 +852,17 @@ async function send() {
   try {
     abortController = new AbortController();
 
+    if (!sessionId) {
+      const newChat = await createNewSession();
+      sessionId = newChat.id;
+      chats.unshift(newChat);
+      renderChatList();
+    }
+
     const res = await fetch("/ask_stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ q, session_id: sessionId }),
+      body: JSON.stringify({ message: q, session_id: sessionId }),
       signal: abortController.signal
     });
 
