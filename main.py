@@ -79,6 +79,11 @@ from personality.affinity import update_personality
 from personality.personality_prompt import build_personality_prompt
 from personality.attitude_analysis import analyze_user_intent_llm, schedule_personality_analysis
 
+DEVELOPER_SESSION_ID = "**developer_chat**"
+DEVELOPER_SESSION_TITLE = "🛠 開発・改善専用"
+
+def is_developer_chat(session_id: str | None) -> bool: return session_id == DEVELOPER_SESSION_ID
+
 from app_settings import (
     load_app_settings,
     is_developer_agent_enabled,
