@@ -1043,6 +1043,9 @@ def ask(req: AskRequest):
         q = req.message
         session_id = req.session_id
 
+        if q.startswith("コード取得:"):
+            return {"reply": handle_code_lookup_command(q)}
+
         if q.startswith("改善案反映:"):
             try:
                 plan_text = q.replace("改善案反映:", "", 1).strip()
