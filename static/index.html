@@ -301,7 +301,15 @@
       font-size: 12px;
       color: #666;
     }
-  </style>
+  
+.chat-item.developer-chat {
+  background: #2d2a1f;
+  border-left: 4px solid #f0b429;
+  color: #ffd978;
+  font-weight: 700;
+}
+
+</style>
 </head>
 
 <body>
@@ -1129,7 +1137,7 @@ function renderChatList() {
 
   chats.forEach(c => {
     const row = document.createElement("div");
-    row.className = "chat-item" + (c.id === sessionId ? " active" : "");
+    row.className = "chat-item" + (c.id === sessionId ? " active" : "") + (c.id === "__developer_chat__" ? " developer-chat" : "");
     row.onclick = () => switchChat(c.id);
 
     const title = document.createElement("div");
@@ -1148,7 +1156,9 @@ function renderChatList() {
     };
 
     row.appendChild(title);
-    row.appendChild(del);
+    if (c.id !== "__developer_chat__") {
+      row.appendChild(del);
+    }
     chatList.appendChild(row);
   });
 }
