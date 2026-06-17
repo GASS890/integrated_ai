@@ -1034,6 +1034,15 @@ def dev_approve_change():
         "result": approve_change()
     }
 
+
+@app.get("/change_history_view")
+def change_history_view():
+    try:
+        return {"text": handle_change_history_command("変更履歴")}
+    except Exception as e:
+        return {"text": f"変更履歴の取得に失敗しました: {type(e).__name__}: {e}"}
+
+
 # =========================================================
 # endpoints
 # =========================================================
