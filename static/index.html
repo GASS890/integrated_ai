@@ -424,6 +424,7 @@
 
       <div class="sidebar" id="sidebar">
         <button onclick="newChat()">＋ 新規チャット</button>
+        <button onclick="showChangeHistoryPanel()">変更履歴</button>
         <div id="chatList"></div>
       </div>
 
@@ -434,6 +435,15 @@
           <div class="summary-title">これまでの要約</div>
           <div id="summaryText"></div>
         </div>
+
+        
+<div id="changeHistoryPanel" style="display:none; padding:10px; margin:8px; border:1px solid #555; border-radius:8px; background:#1f1f1f; color:#eee; max-height:300px; overflow:auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <b>変更履歴</b>
+    <button onclick="document.getElementById('changeHistoryPanel').style.display='none'">閉じる</button>
+  </div>
+  <pre id="changeHistoryContent" style="white-space:pre-wrap;"></pre>
+</div>
 
         <div id="chat" class="chat"></div>
 
@@ -489,6 +499,24 @@ const textarea = document.getElementById("question");
 const sendBtn = document.getElementById("sendBtn");
 const summaryBox = document.getElementById("summaryBox");
 const summaryText = document.getElementById("summaryText");
+
+
+async function showChangeHistoryPanel() {
+  const panel = document.getElementById("changeHistoryPanel");
+  const content = document.getElementById("changeHistoryContent");
+  if (!panel || !content) return;
+
+  panel.style.display = "block";
+  content.innerText = "読み込み中...";
+
+  try {
+    const res = await fetch("/change_history_view");
+    const data = await res.json();
+    content.innerText = data.text || JSON.stringify(data, null, 2);
+  } catch (e) {
+    content.innerText = "変更履歴の取得に失敗しました: " + e;
+  }
+}
 
 /* ===== ステータス ===== */
 function setStatus(text) {
