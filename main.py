@@ -78,6 +78,7 @@ from personality.state_manager import _init_personality, _ensure_personality
 from personality.affinity import update_personality
 from personality.personality_prompt import build_personality_prompt
 from personality.attitude_analysis import analyze_user_intent_llm, schedule_personality_analysis
+from personality.state_schema import normalize_sessions_personality
 
 DEVELOPER_SESSION_ID = "__developer_chat__"
 DEVELOPER_SESSION_TITLE = "🛠 開発・改善専用"
@@ -766,6 +767,7 @@ def persist_memories():
         save_memory_db(memory_db, MEMORY_FILE)
 
 _loaded = load_sessions_from_file()
+_loaded = normalize_sessions_personality(_loaded)
 
 if DEVELOPER_SESSION_ID not in _loaded: _loaded[DEVELOPER_SESSION_ID] = {"title": DEVELOPER_SESSION_TITLE, "title_fixed": True, "summary": "", "messages": [], "created_at": time.time(), "personality_id": "default", "chat_type": "developer"}
 
