@@ -6,15 +6,10 @@ from memory.embedding_store import simple_embedding
 
 
 OLLAMA_EMBED_MODEL = "nomic-embed-text"
-OLLAMA_EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
+OLLAMA_EMBED_URL = "http://127.0.0.1:11434/api/embed"
 
 
 def get_embedding(text: str, backend: str = "ollama"):
-    """
-    backend:
-    - ollama: Ollama embeddingを使用
-    - simple: 既存の疑似embeddingを使用
-    """
     text = (text or "").strip()
 
     if not text:
@@ -31,7 +26,7 @@ def get_embedding(text: str, backend: str = "ollama"):
 def _ollama_embedding(text: str):
     payload = {
         "model": OLLAMA_EMBED_MODEL,
-        "prompt": text
+        "input": text
     }
 
     data = json.dumps(payload).encode("utf-8")
@@ -46,7 +41,10 @@ def _ollama_embedding(text: str):
     try:
         with urllib.request.urlopen(req, timeout=10) as res:
             body = json.loads(res.read().decode("utf-8"))
-            return body.get("embedding")
+            embeddings = body.get("embeddings")
+            if embeddings and len(embeddings) > 0:
+                return embeddings[0]
+            return None
     except urllib.error.URLError:
         return None
     except Exception:
