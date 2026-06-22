@@ -1,34 +1,21 @@
-# llm/router.py
+﻿from .models import LLMRequest, LLMResponse
+from .ollama_backend import OllamaBackend
+from .openai_backend import OpenAIBackend
+from .claude_backend import ClaudeBackend
 
-import os
-from . import ollama_backend
-from . import openai_backend
+_BACKENDS = {
+    "ollama": OllamaBackend(),
+    "openai": OpenAIBackend(),
+    "claude": ClaudeBackend(),
+}
 
-def current_backend() -> str:
-    return os.getenv("LLM_BACKEND", "ollama").lower()
+def get_backend(name: str = "ollama"):
+    if name not in _BACKENDS:
+        raise ValueError(f"Unknown LLM backend: {name}")
+    return _BACKENDS[name]
 
-def chat(messages, model, options=None, timeout=120):
-    backend = current_backend()
+def chat(req: LLMRequest, backend_name: str = "ollama") -> LLMResponse:
+    return get_backend(backend_name).chat(req)
 
-    if backend == "openai":
-        print("[LLM] backend=openai")
-        return openai_backend.chat(messages, model, options, timeout)
-
-    print("[LLM] backend=ollama")
-    return ollama_backend.chat(messages, model, options, timeout)
-
-
-def stream(messages, model, options=None, timeout=120):
-    backend = current_backend()
-
-    if backend == "openai":
-        print("[LLM] backend=openai stream")
-        for delta in openai_backend.stream(messages, model, options, timeout):
-            print("[stream delta]", repr(delta[:20]))
-            yield delta
-        return
-
-    print("[LLM] backend=ollama stream")
-    for delta in ollama_backend.stream(messages, model, options, timeout):
-        print("[stream delta]", repr(delta[:20]))
-        yield delta
+def stream_chat(req: LLMRequest, backend_name: str = "ollama"):
+    return get_backend(backend_name).stream_chat(req)
