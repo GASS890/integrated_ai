@@ -1130,6 +1130,23 @@ def change_history_view():
     except Exception as e:
         return {"text": f"変更履歴の取得に失敗しました: {type(e).__name__}: {e}"}
 
+
+def handle_llm_status_command() -> str:
+    try:
+        from llm.router import get_backend
+        backend = get_backend("ollama")
+
+        return "\n".join([
+            "===== LLM確認 =====",
+            "router: OK",
+            f"default backend: {backend.name}",
+            "available backends: ollama, openai, claude",
+            "current mode: main.py -> llm_client.call_chat_routed -> Ollama",
+        ])
+    except Exception as e:
+        return f"LLM確認に失敗しました: {type(e).__name__}: {e}"
+
+
 # =========================================================
 # endpoints
 # =========================================================
@@ -1142,6 +1159,10 @@ def ask(req: AskRequest):
     try:
         q = req.message
         session_id = req.session_id
+
+        if q.startswith("LLM確認"):
+            return {"answer": handle_llm_status_command()}
+
 
         if q.startswith("コード取得:"):
             return {"reply": handle_code_lookup_command(q)}
@@ -1548,6 +1569,14 @@ def ask_stream(req: AskRequest):
     try:
         q = req.message
         session_id = req.session_id
+
+        if q.startswith("LLM確認"):
+            msg = handle_llm_status_command()
+            def llm_status_event():
+                yield f"data: {json.dumps({'type': 'delta', 'text': msg}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+            return StreamingResponse(llm_status_event(), media_type="text/event-stream")
+
 
         if q.startswith("コード取得:"):
             lookup_text = handle_code_lookup_command(q)
