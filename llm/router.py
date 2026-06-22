@@ -19,7 +19,7 @@ def load_default_backend() -> str:
         if not p.exists():
             return "ollama"
 
-        data = json.loads(p.read_text(encoding="utf-8"))
+        data = json.loads(p.read_text(encoding="utf-8-sig"))
         backend = data.get("default_backend", "ollama")
         return backend if backend in _BACKENDS else "ollama"
     except Exception:

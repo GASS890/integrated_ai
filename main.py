@@ -1158,7 +1158,7 @@ def handle_llm_status_command() -> str:
         config_backend = "ollama"
 
         if config_path.exists():
-            data = json.loads(config_path.read_text(encoding="utf-8"))
+            data = json.loads(config_path.read_text(encoding="utf-8-sig"))
             config_backend = data.get("default_backend", "ollama")
 
         active_backend = load_default_backend()
