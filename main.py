@@ -1147,6 +1147,37 @@ def handle_llm_status_command() -> str:
         return f"LLM確認に失敗しました: {type(e).__name__}: {e}"
 
 
+
+def handle_llm_status_command() -> str:
+    try:
+        import json
+        from pathlib import Path
+        from llm.router import get_backend, load_default_backend
+
+        config_path = Path("config/llm_backend.json")
+        config_backend = "ollama"
+
+        if config_path.exists():
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+            config_backend = data.get("default_backend", "ollama")
+
+        active_backend = load_default_backend()
+        backend = get_backend(active_backend)
+
+        return "\n".join([
+            "===== LLM確認 =====",
+            "router: OK",
+            f"設定ファイル: {config_path}",
+            f"設定上のbackend: {config_backend}",
+            f"有効backend: {backend.name}",
+            "利用可能backend: ollama, openai, claude",
+            "現在の経路: main.py -> llm_client.call_chat_routed -> Ollama",
+        ])
+
+    except Exception as e:
+        return f"LLM確認に失敗しました: {type(e).__name__}: {e}"
+
+
 # =========================================================
 # endpoints
 # =========================================================
