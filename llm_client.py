@@ -76,9 +76,12 @@ def stream_chat(messages, model=None, options=None, timeout=120):
 # =========================================================
 # LLM backend router entry points
 # =========================================================
-def call_chat_routed(messages, backend_name: str = "ollama", model: str | None = None, temperature: float = 0.7, options=None):
+def call_chat_routed(messages, model=None, options=None, timeout=120, backend_name: str = "ollama", temperature: float = 0.7):
     from llm.models import LLMRequest
     from llm.router import chat
+
+    if backend_name == "ollama":
+        return call_chat(messages, model=model, options=options, timeout=timeout)
 
     req = LLMRequest(
         messages=messages,
@@ -86,16 +89,15 @@ def call_chat_routed(messages, backend_name: str = "ollama", model: str | None =
         temperature=temperature,
         stream=False,
     )
-
-    if backend_name == "ollama":
-        return call_chat(messages, model=model, options=options or {"temperature": temperature})
-
     return chat(req, backend_name=backend_name).text
 
 
-def stream_chat_routed(messages, backend_name: str = "ollama", model: str | None = None, temperature: float = 0.7, options=None):
+def stream_chat_routed(messages, model=None, options=None, timeout=120, backend_name: str = "ollama", temperature: float = 0.7):
     from llm.models import LLMRequest
     from llm.router import stream_chat as routed_stream_chat
+
+    if backend_name == "ollama":
+        return stream_chat(messages, model=model, options=options, timeout=timeout)
 
     req = LLMRequest(
         messages=messages,
@@ -103,8 +105,4 @@ def stream_chat_routed(messages, backend_name: str = "ollama", model: str | None
         temperature=temperature,
         stream=True,
     )
-
-    if backend_name == "ollama":
-        return stream_chat(messages, model=model, options=options or {"temperature": temperature})
-
     return routed_stream_chat(req, backend_name=backend_name)
