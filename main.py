@@ -1178,6 +1178,36 @@ def handle_llm_status_command() -> str:
         return f"LLM確認に失敗しました: {type(e).__name__}: {e}"
 
 
+
+def handle_llm_switch_command(q: str) -> str:
+    try:
+        import json
+        from pathlib import Path
+
+        backend = q.replace("LLM切替:", "", 1).strip()
+        allowed = {"ollama", "openai", "claude"}
+
+        if backend not in allowed:
+            return "指定できるbackendは ollama / openai / claude です。\n例: LLM切替:ollama"
+
+        config_path = Path("config/llm_backend.json")
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        config_path.write_text(
+            json.dumps({"default_backend": backend}, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+
+        note = ""
+        if backend != "ollama":
+            note = "\n注意: openai / claude backend はまだ未接続です。"
+
+        return f"LLM backendを {backend} に切り替えました。{note}"
+
+    except Exception as e:
+        return f"LLM backend切替に失敗しました: {type(e).__name__}: {e}"
+
+
 # =========================================================
 # endpoints
 # =========================================================
@@ -1190,6 +1220,10 @@ def ask(req: AskRequest):
     try:
         q = req.message
         session_id = req.session_id
+
+        if q.startswith("LLM切替:"):
+            return {"answer": handle_llm_switch_command(q)}
+
 
         if q.startswith("LLM確認"):
             return {"answer": handle_llm_status_command()}
@@ -1600,6 +1634,14 @@ def ask_stream(req: AskRequest):
     try:
         q = req.message
         session_id = req.session_id
+
+        if q.startswith("LLM切替:"):
+            msg = handle_llm_switch_command(q)
+            def llm_switch_event():
+                yield f"data: {json.dumps({'type': 'delta', 'text': msg}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+            return StreamingResponse(llm_switch_event(), media_type="text/event-stream")
+
 
         if q.startswith("LLM確認"):
             msg = handle_llm_status_command()
