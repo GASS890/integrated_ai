@@ -1577,7 +1577,26 @@ def ask_stream(req: AskRequest):
                 media_type="text/event-stream"
             )
 
-        return ask(req)
+        normal_result = ask(req)
+
+        if isinstance(normal_result, dict):
+            msg = (
+                normal_result.get("answer")
+                or normal_result.get("reply")
+                or normal_result.get("result")
+                or str(normal_result)
+            )
+        else:
+            msg = str(normal_result)
+
+        def normal_chat_event():
+            yield f"data: {json.dumps({'type': 'delta', 'text': msg}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            normal_chat_event(),
+            media_type="text/event-stream"
+        )
 
     except Exception as e:
         tb = traceback.format_exc()
