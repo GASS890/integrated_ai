@@ -44,7 +44,7 @@ import sys
 import time
 import uuid
 
-from llm_client import call_chat, stream_chat, OPTIONS
+from llm_client import call_chat_routed as call_chat, stream_chat, OPTIONS
 from voicevox_client import synthesize_voice
 from io import BytesIO
 from file_ops import (
