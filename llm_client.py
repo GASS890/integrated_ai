@@ -8,6 +8,12 @@ OPTIONS = {
     "chat": {
         "temperature": 0.7,
     },
+    "fast_chat": {
+        "temperature": 0.7,
+    },
+    "smart_chat": {
+        "temperature": 0.7,
+    },
     "format": {
         "temperature": 0.2,
     },
