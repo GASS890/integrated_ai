@@ -1036,12 +1036,20 @@ def dev_approve_change():
 
 
 
+
 @app.get("/change_history_view")
 def change_history_view():
     try:
         import subprocess
+
         r = subprocess.run(
-            ["git", "log", "--oneline", "--decorate", "-30"],
+            [
+                "git",
+                "log",
+                "--date=format:%Y-%m-%d %H:%M",
+                "--pretty=format:%h%x09%d%x09%ad%x09%s",
+                "-30",
+            ],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -1051,16 +1059,76 @@ def change_history_view():
         if r.returncode != 0:
             return {"text": "Git履歴の取得に失敗しました。\n" + r.stderr}
 
-        body = r.stdout.strip() if r.stdout.strip() else "履歴がありません。"
-        return {
-            "text": "===== Git Change History =====\n"
-            + body
-            + "\n\n復元する場合:\nバージョン復元:v0.99-test-xx"
-        }
+        if not r.stdout.strip():
+            return {"text": "変更履歴はまだありません。"}
+
+        def translate_message(msg: str) -> str:
+            rules = [
+                ("Force fix change history view endpoint", "変更履歴表示APIの不具合を強制修正"),
+                ("Fix change history GUI and developer chat UI", "変更履歴GUIと開発専用チャット表示を修正"),
+                ("Fix phase1d history view and developer chat UI", "Phase1-Dの履歴表示と開発専用チャットUIを修正"),
+                ("Fix change history view with direct git log", "変更履歴をGit履歴から直接表示するよう修正"),
+                ("Add safe change history GUI button", "安全版の変更履歴ボタンを追加"),
+                ("Restore developer chat color and delete lock", "開発専用チャットの色分けと削除禁止を復元"),
+                ("Add safe change history view API", "安全版の変更履歴表示APIを追加"),
+                ("Show developer chat in chat list", "開発・改善専用チャットを一覧に表示"),
+                ("Fix ask_stream command handling", "ask_streamのコマンド処理を修正"),
+                ("Add standalone code lookup tool", "単体コード取得ツールを追加"),
+                ("Fix code lookup stream display", "コード取得のストリーム表示を修正"),
+                ("Wire code lookup command to stream route", "コード取得コマンドをストリーム経路へ接続"),
+                ("Wire code lookup command to ask route", "コード取得コマンドを通常応答経路へ接続"),
+                ("Add code lookup command", "コード取得コマンドを追加"),
+                ("Add fixed developer chat session for phase0", "Phase0用の固定開発チャットセッションを追加"),
+            ]
+
+            for en, ja in rules:
+                if en in msg:
+                    return ja
+
+            return msg
+
+        lines = ["===== 変更履歴 ====="]
+
+        for raw in r.stdout.splitlines():
+            parts = raw.split("\t")
+            if len(parts) < 4:
+                continue
+
+            commit_hash, decoration, date_text, message = parts[0], parts[1], parts[2], parts[3]
+
+            version = ""
+            for token in decoration.replace("(", "").replace(")", "").split(","):
+                token = token.strip()
+                if token.startswith("tag:"):
+                    tag = token.replace("tag:", "").strip()
+                    if tag.startswith("v"):
+                        version = tag
+                        break
+
+            if not version:
+                version = "タグなし"
+
+            summary = translate_message(message)
+
+            lines.append("")
+            lines.append(f"■ {version}")
+            lines.append(f"日時: {date_text}")
+            lines.append(f"内容: {summary}")
+            lines.append(f"コミット: {commit_hash}")
+
+            if version != "タグなし":
+                lines.append(f"復元: バージョン復元:{version}")
+
+            lines.append("--------------------------------")
+
+        lines.append("")
+        lines.append("復元する場合は、開発・改善専用チャットで以下の形式を送信してください。")
+        lines.append("バージョン復元:v0.99-test-xx")
+
+        return {"text": "\n".join(lines)}
 
     except Exception as e:
         return {"text": f"変更履歴の取得に失敗しました: {type(e).__name__}: {e}"}
-
 
 # =========================================================
 # endpoints
