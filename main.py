@@ -81,6 +81,7 @@ from personality.attitude_analysis import analyze_user_intent_llm, schedule_pers
 from personality.state_schema import normalize_sessions_personality
 from memory.vector_search import search_similar_memories
 from memory.memory_reflection import reflect_conversation_to_memory
+from memory.embedding_store import load_embedding_memories, add_embedding_memory
 
 DEVELOPER_SESSION_ID = "__developer_chat__"
 DEVELOPER_SESSION_TITLE = "🛠 開発・改善専用"
@@ -822,6 +823,11 @@ class FeedbackRequest(BaseModel):
 class MemorySaveRequest(BaseModel):
     text: str
     kind: str | None = None
+
+
+class EmbeddingMemorySearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
 
 
 class MemoryDeleteRequest(BaseModel):
@@ -1872,6 +1878,67 @@ def remove_memory(req: MemoryDeleteRequest):
         raise HTTPException(status_code=404, detail="memory not found")
     persist_memories()
     return {"status": "ok"}
+
+
+@app.get("/memory/embedding")
+def get_embedding_memories():
+    items = load_embedding_memories()
+    return {
+        "count": len(items),
+        "items": [
+            {
+                "id": item.get("id"),
+                "text": item.get("text"),
+                "embedding_backend": item.get("embedding_backend"),
+                "embedding_dim": len(item.get("embedding", [])),
+                "importance": item.get("importance"),
+                "access_count": item.get("access_count"),
+                "meta": item.get("meta", {}),
+                "created_at": item.get("created_at"),
+                "updated_at": item.get("updated_at"),
+            }
+            for item in items[-100:]
+        ]
+    }
+
+
+@app.post("/memory/embedding/search")
+def search_embedding_memories(req: EmbeddingMemorySearchRequest):
+    results = search_similar_memories(
+        req.query,
+        top_k=req.top_k,
+        min_score=0.0,
+        backend="ollama",
+    )
+    return {
+        "query": req.query,
+        "count": len(results),
+        "results": results,
+    }
+
+
+@app.post("/memory/embedding/save")
+def save_embedding_memory_debug(req: MemorySaveRequest):
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text is empty")
+
+    item = add_embedding_memory(
+        text,
+        {
+            "importance": 0.7,
+            "category": "debug",
+            "embedding_backend": "ollama",
+            "source": "debug_api",
+        }
+    )
+
+    return {
+        "status": "ok",
+        "id": item.get("id"),
+        "embedding_backend": item.get("embedding_backend"),
+        "embedding_dim": len(item.get("embedding", [])),
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
