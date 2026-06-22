@@ -1096,6 +1096,33 @@ def change_history_view():
         return {"text": f"変更履歴の取得に失敗しました: {type(e).__name__}: {e}"}
 
 
+
+@app.get("/change_history_view")
+def change_history_view():
+    try:
+        import subprocess
+        r = subprocess.run(
+            ["git", "log", "--oneline", "--decorate", "-30"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        if r.returncode != 0:
+            return {"text": "Git履歴の取得に失敗しました。\n" + r.stderr}
+
+        body = r.stdout.strip() if r.stdout.strip() else "履歴がありません。"
+        return {
+            "text": "===== Git Change History =====\n"
+            + body
+            + "\n\n復元する場合:\nバージョン復元:v0.99-test-xx"
+        }
+
+    except Exception as e:
+        return {"text": f"変更履歴の取得に失敗しました: {type(e).__name__}: {e}"}
+
+
 # =========================================================
 # endpoints
 # =========================================================
