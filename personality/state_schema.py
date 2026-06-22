@@ -22,3 +22,33 @@ def personality_state_to_dict(state: PersonalityState) -> dict:
         "traits": state.traits,
         "learning_policy": state.learning_policy,
     }
+
+
+def normalize_session_personality(session: dict) -> dict:
+    if not isinstance(session, dict):
+        return session
+
+    raw_personality = session.get("personality", {})
+
+    if not isinstance(raw_personality, dict):
+        raw_personality = {}
+
+    if "personality_id" not in raw_personality:
+        raw_personality["personality_id"] = session.get("personality_id", "default")
+
+    state = build_personality_state(raw_personality)
+    session["personality"] = personality_state_to_dict(state)
+    session["personality_id"] = state.personality_id
+
+    return session
+
+
+def normalize_sessions_personality(sessions: dict) -> dict:
+    if not isinstance(sessions, dict):
+        return sessions
+
+    for _, session in sessions.items():
+        if isinstance(session, dict):
+            normalize_session_personality(session)
+
+    return sessions
