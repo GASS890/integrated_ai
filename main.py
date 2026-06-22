@@ -1164,6 +1164,13 @@ def handle_llm_status_command() -> str:
         active_backend = load_default_backend()
         backend = get_backend(active_backend)
 
+        openai_ready = False
+        try:
+            from llm.openai_backend import OpenAIBackend
+            openai_ready = OpenAIBackend().is_configured()
+        except Exception:
+            openai_ready = False
+
         return "\n".join([
             "===== LLM確認 =====",
             "router: OK",
@@ -1171,6 +1178,7 @@ def handle_llm_status_command() -> str:
             f"設定上のbackend: {config_backend}",
             f"有効backend: {backend.name}",
             "利用可能backend: ollama, openai, claude",
+            f"OpenAI APIキー: {'設定済み' if openai_ready else '未設定'}",
             "現在の経路: main.py -> llm_client.call_chat_routed -> Ollama",
         ])
 
