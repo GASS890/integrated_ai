@@ -1,32 +1,23 @@
-﻿import os
-
-from voice.voicevox_client import synthesize_voice as synthesize_voicevox
+﻿from voice.voicevox_client import synthesize_voice as synthesize_voicevox
 from voice.piper_client import synthesize_piper, is_piper_ready
 from voice.piper_plus_client import synthesize_piper_plus, is_piper_plus_ready
+from voice.tts_settings import load_tts_settings, save_tts_settings, get_default_tts_backend
+from voice.tts_status import get_tts_status, get_available_tts_backends
 
 
-DEFAULT_TTS_BACKEND = os.getenv("TTS_BACKEND", "voicevox").lower()
+def update_tts_settings(settings: dict) -> dict:
+    backend = (settings or {}).get("backend")
+    if backend and backend not in ["voicevox", "piper", "piper_plus", "auto"]:
+        raise ValueError(f"Unknown TTS backend: {backend}")
+
+    fallback = (settings or {}).get("fallback_backend")
+    if fallback and fallback not in ["voicevox", "piper", "piper_plus", "auto"]:
+        raise ValueError(f"Unknown fallback TTS backend: {fallback}")
+
+    return save_tts_settings(settings or {})
 
 
-def get_tts_status() -> dict:
-    return {
-        "default_backend": DEFAULT_TTS_BACKEND,
-        "piper_ready": is_piper_ready(),
-        "piper_plus_ready": is_piper_plus_ready(),
-        "piper_model": os.getenv("PIPER_MODEL", "models/piper/default.onnx"),
-        "piper_plus_model": os.getenv("PIPER_PLUS_MODEL", "tools/piper-plus/src/python_run/tsukuyomi-chan-6lang-fp16.onnx"),
-        "role_plan": {
-            "speaker": "耳と口。将来はPiper Plus/TTSと音声再生を担当",
-            "smartphone": "脳・人格・短期記憶・UI",
-            "pc": "長期記憶・Embedding検索・重い処理・音声学習",
-            "cloud": "バックアップ・同期",
-        },
-    }
-
-
-def synthesize_voice(text: str, speaker: int = 1, backend: str | None = None) -> bytes:
-    selected = (backend or DEFAULT_TTS_BACKEND or "voicevox").lower()
-
+def _synthesize_selected(text: str, speaker: int, selected: str) -> bytes:
     if selected == "piper_plus":
         return synthesize_piper_plus(text, speaker=speaker)
 
@@ -44,3 +35,21 @@ def synthesize_voice(text: str, speaker: int = 1, backend: str | None = None) ->
         return synthesize_voicevox(text, speaker=speaker)
 
     raise ValueError(f"Unknown TTS backend: {selected}")
+
+
+def synthesize_voice(text: str, speaker: int = 1, backend: str | None = None) -> bytes:
+    settings = load_tts_settings()
+    selected = (backend or get_default_tts_backend() or "voicevox").lower()
+    speaker = int(speaker or settings.get("speaker", 1))
+
+    try:
+        return _synthesize_selected(text, speaker, selected)
+    except Exception:
+        if not settings.get("auto_fallback", True):
+            raise
+
+        fallback = str(settings.get("fallback_backend", "voicevox")).lower()
+        if fallback == selected:
+            raise
+
+        return _synthesize_selected(text, speaker, fallback)

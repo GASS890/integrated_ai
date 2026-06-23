@@ -1,0 +1,6 @@
+{
+  "backend": "piper_plus",
+  "fallback_backend": "voicevox",
+  "speaker": 1,
+  "auto_fallback": true
+}

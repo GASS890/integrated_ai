@@ -45,7 +45,7 @@ import time
 import uuid
 
 from llm_client import call_chat_routed as call_chat, stream_chat_routed as stream_chat, OPTIONS
-from voice.tts_router import synthesize_voice, get_tts_status
+from voice.tts_router import synthesize_voice, get_tts_status, update_tts_settings, get_available_tts_backends
 from io import BytesIO
 from file_ops import (
     write_file,
@@ -1991,6 +1991,19 @@ def favicon():
 # ==============================
 # 音声合成API（VOICEVOX）
 # ==============================
+@app.get("/tts/backends")
+def tts_backends():
+    return get_available_tts_backends()
+
+
+@app.post("/tts/settings")
+def tts_settings_update(settings: dict):
+    try:
+        return update_tts_settings(settings)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/tts/status")
 def tts_status():
     return get_tts_status()
