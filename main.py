@@ -82,6 +82,9 @@ from personality.state_schema import normalize_sessions_personality
 from memory.vector_search import search_similar_memories
 from memory.memory_reflection import reflect_conversation_to_memory
 from memory.embedding_store import load_embedding_memories, add_embedding_memory
+from personality.learning_config import describe_learning_strength
+from personality.tone_profile import update_tone_profile, build_tone_prompt, summarize_tone_profile
+from personality.growth_manager import update_growth_state, build_growth_prompt, summarize_growth_state
 
 DEVELOPER_SESSION_ID = "__developer_chat__"
 DEVELOPER_SESSION_TITLE = "🛠 開発・改善専用"
@@ -959,6 +962,9 @@ def finalize_interaction(
     - sessions保存
     - 人格分析
     """
+    update_tone_profile(session, user_text)
+    update_growth_state(session, user_text, assistant_text)
+
     _append_session_message(session, "user", user_text)
     _append_session_message(session, "assistant", assistant_text)
 
@@ -1612,6 +1618,14 @@ def ask(req: AskRequest):
         if personality_text.strip():
             messages.insert(1, {"role": "system", "content": personality_text})
 
+        tone_text = build_tone_prompt(session)
+        if tone_text.strip():
+            messages.insert(1, {"role": "system", "content": tone_text})
+
+        growth_text = build_growth_prompt(session)
+        if growth_text.strip():
+            messages.insert(1, {"role": "system", "content": growth_text})
+
         if STYLE.strip():
             messages.insert(0, {"role": "system", "content": STYLE})
 
@@ -1832,6 +1846,8 @@ def get_history(session_id: str):
         "summary": session.get("summary", ""),
         "messages": session.get("messages", []),
         "personality": _ensure_personality(session),
+        "tone_profile": summarize_tone_profile(session),
+        "growth_state": summarize_growth_state(session),
     }
 
 @app.get("/title")
@@ -1878,6 +1894,27 @@ def remove_memory(req: MemoryDeleteRequest):
         raise HTTPException(status_code=404, detail="memory not found")
     persist_memories()
     return {"status": "ok"}
+
+
+@app.get("/personality/growth")
+def get_personality_growth(session_id: str):
+    session = sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="session not found")
+    return summarize_growth_state(session)
+
+
+@app.get("/personality/tone_profile")
+def get_personality_tone_profile(session_id: str):
+    session = sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="session not found")
+    return summarize_tone_profile(session)
+
+
+@app.get("/personality/learning_strength")
+def get_personality_learning_strength():
+    return describe_learning_strength()
 
 
 @app.get("/memory/embedding")

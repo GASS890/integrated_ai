@@ -1,5 +1,6 @@
 ﻿import math
 from memory.embedding_store import build_embedding, load_embedding_memories, update_memory_access
+from memory.memory_ranker import rank_memories
 
 
 def cosine_similarity(a, b):
@@ -36,16 +37,9 @@ def search_similar_memories(query: str, top_k: int = 5, min_score: float = 0.25,
                 "meta": item.get("meta", {}),
             })
 
-    results.sort(
-        key=lambda x: (
-            x["score"] * 0.7 +
-            float(x.get("importance", 0.5)) * 0.2 +
-            min(int(x.get("access_count", 0)), 10) * 0.01
-        ),
-        reverse=True
-    )
+    ranked = rank_memories(results)
 
-    selected = results[:top_k]
+    selected = ranked[:top_k]
     for item in selected:
         if item.get("id"):
             update_memory_access(item["id"])
