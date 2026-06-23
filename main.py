@@ -45,7 +45,7 @@ import time
 import uuid
 
 from llm_client import call_chat_routed as call_chat, stream_chat_routed as stream_chat, OPTIONS
-from voicevox_client import synthesize_voice
+from voice.tts_router import synthesize_voice, get_tts_status
 from io import BytesIO
 from file_ops import (
     write_file,
@@ -1991,6 +1991,11 @@ def favicon():
 # ==============================
 # 音声合成API（VOICEVOX）
 # ==============================
+@app.get("/tts/status")
+def tts_status():
+    return get_tts_status()
+
+
 @app.post("/tts")
 def tts(req: TTSRequest):
     try:
