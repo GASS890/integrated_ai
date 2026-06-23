@@ -1,0 +1,8 @@
+{
+  "mode": "local",
+  "device_role": "speaker",
+  "tts_backend": "piper_plus",
+  "auto_play": false,
+  "output_dir": "outputs/tts",
+  "future_remote_url": ""
+}

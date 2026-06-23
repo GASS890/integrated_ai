@@ -46,6 +46,7 @@ import uuid
 
 from llm_client import call_chat_routed as call_chat, stream_chat_routed as stream_chat, OPTIONS
 from voice.tts_router import synthesize_voice, get_tts_status, update_tts_settings, get_available_tts_backends
+from speaker.speaker_service import speaker_say, get_speaker_status, update_speaker_config
 from io import BytesIO
 from file_ops import (
     write_file,
@@ -1991,6 +1992,26 @@ def favicon():
 # ==============================
 # 音声合成API（VOICEVOX）
 # ==============================
+@app.get("/speaker/status")
+def speaker_status():
+    return get_speaker_status()
+
+
+@app.post("/speaker/settings")
+def speaker_settings_update(settings: dict):
+    return update_speaker_config(settings)
+
+
+@app.post("/speaker/say")
+def speaker_say_api(req: TTSRequest):
+    try:
+        return speaker_say(req.text, backend=None)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/tts/backends")
 def tts_backends():
     return get_available_tts_backends()
