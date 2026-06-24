@@ -4,6 +4,14 @@ import uuid
 from voice.tts_router import synthesize_voice, get_tts_status
 from speaker.speaker_config import load_speaker_config, save_speaker_config
 from speaker.speaker_player import play_wav
+from speaker.speaker_queue import (
+    enqueue,
+    dequeue,
+    clear_queue,
+    get_queue_state,
+    set_playing,
+    increment_played,
+)
 from speaker.speaker_state import (
     get_speaker_state,
     update_speaker_success,
@@ -19,6 +27,7 @@ def get_speaker_status() -> dict:
     return {
         "config": load_speaker_config(),
         "state": get_speaker_state(),
+        "queue": get_queue_state(),
         "tts": get_tts_status(),
         "role_plan": {
             "speaker": "耳と口。将来は別端末化し、マイク・ウェイクワード・TTS・再生を担当。",
@@ -34,9 +43,50 @@ def update_speaker_config(config: dict) -> dict:
 
 
 def speaker_play(path: str) -> dict:
-    result = play_wav(path)
-    update_speaker_played(path)
-    return result
+    set_playing(True)
+    try:
+        result = play_wav(path)
+        update_speaker_played(path)
+        increment_played()
+        return result
+    finally:
+        set_playing(False)
+
+
+def speaker_queue_add(path: str) -> dict:
+    path = (path or "").strip()
+    if not path:
+        raise ValueError("path is empty")
+
+    enqueue({"path": path})
+    return get_queue_state()
+
+
+def speaker_queue_clear() -> dict:
+    clear_queue()
+    return get_queue_state()
+
+
+def speaker_queue_status() -> dict:
+    return get_queue_state()
+
+
+def speaker_queue_play_next() -> dict:
+    item = dequeue()
+    if not item:
+        return {
+            "status": "empty",
+            "queue": get_queue_state(),
+        }
+
+    path = item.get("path", "")
+    result = speaker_play(path)
+
+    return {
+        "status": "ok",
+        "played": result,
+        "queue": get_queue_state(),
+    }
 
 
 def speaker_say(text: str, backend: str | None = None, auto_play: bool | None = None) -> dict:

@@ -46,7 +46,16 @@ import uuid
 
 from llm_client import call_chat_routed as call_chat, stream_chat_routed as stream_chat, OPTIONS
 from voice.tts_router import synthesize_voice, get_tts_status, update_tts_settings, get_available_tts_backends
-from speaker.speaker_service import speaker_say, speaker_play, get_speaker_status, update_speaker_config
+from speaker.speaker_service import (
+    speaker_say,
+    speaker_play,
+    speaker_queue_add,
+    speaker_queue_clear,
+    speaker_queue_status,
+    speaker_queue_play_next,
+    get_speaker_status,
+    update_speaker_config,
+)
 from io import BytesIO
 from file_ops import (
     write_file,
@@ -2000,6 +2009,35 @@ def speaker_status():
 @app.post("/speaker/settings")
 def speaker_settings_update(settings: dict):
     return update_speaker_config(settings)
+
+
+@app.get("/speaker/queue")
+def speaker_queue_get():
+    return speaker_queue_status()
+
+
+@app.post("/speaker/queue/add")
+def speaker_queue_add_api(req: dict):
+    path = (req or {}).get("path", "")
+    try:
+        return speaker_queue_add(path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/speaker/queue/clear")
+def speaker_queue_clear_api():
+    return speaker_queue_clear()
+
+
+@app.post("/speaker/queue/play_next")
+def speaker_queue_play_next_api():
+    try:
+        return speaker_queue_play_next()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/speaker/play")
