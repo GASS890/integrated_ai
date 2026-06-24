@@ -18,6 +18,11 @@ from speaker.speaker_state import (
     update_speaker_played,
     update_speaker_error,
 )
+from speaker.speaker_worker import (
+    worker_status,
+    start_worker,
+    stop_worker,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +33,7 @@ def get_speaker_status() -> dict:
         "config": load_speaker_config(),
         "state": get_speaker_state(),
         "queue": get_queue_state(),
+        "worker": worker_status(),
         "tts": get_tts_status(),
         "role_plan": {
             "speaker": "耳と口。将来は別端末化し、マイク・ウェイクワード・TTS・再生を担当。",
@@ -87,6 +93,18 @@ def speaker_queue_play_next() -> dict:
         "played": result,
         "queue": get_queue_state(),
     }
+
+
+def speaker_worker_status() -> dict:
+    return worker_status()
+
+
+def speaker_worker_start() -> dict:
+    return start_worker()
+
+
+def speaker_worker_stop() -> dict:
+    return stop_worker()
 
 
 def speaker_say(text: str, backend: str | None = None, auto_play: bool | None = None) -> dict:

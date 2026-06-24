@@ -53,6 +53,9 @@ from speaker.speaker_service import (
     speaker_queue_clear,
     speaker_queue_status,
     speaker_queue_play_next,
+    speaker_worker_status,
+    speaker_worker_start,
+    speaker_worker_stop,
     get_speaker_status,
     update_speaker_config,
 )
@@ -2009,6 +2012,21 @@ def speaker_status():
 @app.post("/speaker/settings")
 def speaker_settings_update(settings: dict):
     return update_speaker_config(settings)
+
+
+@app.get("/speaker/worker")
+def speaker_worker_get():
+    return speaker_worker_status()
+
+
+@app.post("/speaker/worker/start")
+def speaker_worker_start_api():
+    return speaker_worker_start()
+
+
+@app.post("/speaker/worker/stop")
+def speaker_worker_stop_api():
+    return speaker_worker_stop()
 
 
 @app.get("/speaker/queue")
