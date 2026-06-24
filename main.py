@@ -46,7 +46,7 @@ import uuid
 
 from llm_client import call_chat_routed as call_chat, stream_chat_routed as stream_chat, OPTIONS
 from voice.tts_router import synthesize_voice, get_tts_status, update_tts_settings, get_available_tts_backends
-from speaker.speaker_service import speaker_say, get_speaker_status, update_speaker_config
+from speaker.speaker_service import speaker_say, speaker_play, get_speaker_status, update_speaker_config
 from io import BytesIO
 from file_ops import (
     write_file,
@@ -2000,6 +2000,19 @@ def speaker_status():
 @app.post("/speaker/settings")
 def speaker_settings_update(settings: dict):
     return update_speaker_config(settings)
+
+
+@app.post("/speaker/play")
+def speaker_play_api(req: dict):
+    path = (req or {}).get("path", "")
+    if not path:
+        raise HTTPException(status_code=400, detail="path is empty")
+    try:
+        return speaker_play(path)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/speaker/say")
