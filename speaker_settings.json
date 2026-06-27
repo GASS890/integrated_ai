@@ -3,6 +3,7 @@
   "device_role": "speaker",
   "tts_backend": "piper_plus",
   "auto_play": false,
+  "auto_enqueue_ai_response": true,
   "output_dir": "outputs/tts",
   "future_remote_url": ""
 }
