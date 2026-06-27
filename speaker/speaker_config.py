@@ -10,6 +10,7 @@ DEFAULT_SPEAKER_CONFIG = {
     "device_role": "speaker",
     "tts_backend": "piper_plus",
     "auto_play": False,
+    "auto_enqueue_ai_response": True,
     "output_dir": "outputs/tts",
     "future_remote_url": "",
 }

@@ -47,6 +47,7 @@ import uuid
 from llm_client import call_chat_routed as call_chat, stream_chat_routed as stream_chat, OPTIONS
 from voice.tts_router import synthesize_voice, get_tts_status, update_tts_settings, get_available_tts_backends
 from demo.demo_status import get_demo_status
+from speaker.speaker_config import load_speaker_config
 from speaker.speaker_service import (
     speaker_say,
     speaker_play,
@@ -963,6 +964,16 @@ def queue_assistant_reply_to_speaker(assistant_text: str):
     text = (assistant_text or "").strip()
     if not text:
         return None
+
+    try:
+        config = load_speaker_config()
+        if not config.get("auto_enqueue_ai_response", True):
+            return {
+                "status": "skipped",
+                "reason": "auto_enqueue_ai_response is false",
+            }
+    except Exception as e:
+        print("speaker config load error:", e)
 
     try:
         result = speaker_say(
