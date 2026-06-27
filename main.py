@@ -93,6 +93,7 @@ from personality.affinity import update_personality
 from personality.personality_prompt import build_personality_prompt
 from personality.attitude_analysis import analyze_user_intent_llm, schedule_personality_analysis
 from personality.state_schema import normalize_sessions_personality
+from personality.demo_personality_prompt import build_short_demo_personality_prompt
 from memory.vector_search import search_similar_memories
 from memory.memory_reflection import reflect_conversation_to_memory
 from memory.embedding_store import load_embedding_memories, add_embedding_memory
@@ -1615,8 +1616,10 @@ def ask(req: AskRequest):
         memory_db_text = build_long_term_memory_prompt(q, model=model)
         embedding_text = build_embedding_memory_prompt(q)
 
+        demo_personality_text = build_short_demo_personality_prompt()
+
         memories_text = "\n\n".join(
-            part for part in [memory_db_text, embedding_text]
+            part for part in [demo_personality_text, memory_db_text, embedding_text]
             if part and part.strip()
         )
 

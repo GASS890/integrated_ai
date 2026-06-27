@@ -1,0 +1,3 @@
+﻿from personality.demo_personality_prompt import build_short_demo_personality_prompt
+
+print(build_short_demo_personality_prompt())
