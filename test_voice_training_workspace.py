@@ -1,0 +1,3 @@
+﻿from voice_training.voice_training_manager import scan_voice_training_workspace
+
+print(scan_voice_training_workspace())

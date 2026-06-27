@@ -1,0 +1,22 @@
+﻿{
+  "version": 1,
+  "purpose": "Style-Bert-VITS2で高品質教師音声を作り、Piper Plus独自音声学習へ使う",
+  "flow": [
+    "raw_voice",
+    "cleaned_voice",
+    "transcripts",
+    "stylebert_dataset",
+    "teacher_audio",
+    "piper_dataset",
+    "exports"
+  ],
+  "sample_rate": 44100,
+  "target_format": "wav",
+  "teacher_tts": "Style-Bert-VITS2",
+  "student_tts": "Piper Plus",
+  "policy": {
+    "do_not_train_from_unchecked_audio": true,
+    "keep_original_audio": true,
+    "prefer_short_clean_clips": true
+  }
+}
