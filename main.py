@@ -959,6 +959,24 @@ def maybe_store_long_term_memory(user_text: str, intent: dict | None = None):
         persist_memories()
     return item
 
+def queue_assistant_reply_to_speaker(assistant_text: str):
+    text = (assistant_text or "").strip()
+    if not text:
+        return None
+
+    try:
+        result = speaker_say(
+            text,
+            backend=None,
+            auto_play=False,
+        )
+        speaker_queue_add(result["output_file"])
+        return result
+    except Exception as e:
+        print("assistant speaker queue error:", e)
+        return None
+
+
 def finalize_interaction(
     session_id: str,
     session: dict,
@@ -987,6 +1005,11 @@ def finalize_interaction(
         summarize_session(session)
 
     maybe_store_long_term_memory(user_text, intent=intent)
+
+    try:
+        queue_assistant_reply_to_speaker(assistant_text)
+    except Exception as e:
+        print("assistant speaker queue hook error:", e)
 
     try:
         reflect_conversation_to_memory(user_text, assistant_text)
