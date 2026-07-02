@@ -51,7 +51,9 @@ def start_voicevox():
 
 if __name__ == "__main__":
     start_ollama()
-    start_voicevox()
+
+    # VOICEVOX is optional.
+    # start_voicevox()
 
     server_thread = threading.Thread(
         target=start_server,
