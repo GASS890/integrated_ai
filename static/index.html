@@ -1560,6 +1560,7 @@ async function loadTtsSettings() {
     const data = await res.json();
 
     const backend = (data.settings && data.settings.backend) || data.default_backend || "voicevox";
+    const availableBackends = data.available_backends || [];
     const voicevoxEnabled = !!(data.settings && data.settings.voicevox_enabled);
     const piperPlusReady = !!(data.backends && data.backends.piper_plus && data.backends.piper_plus.ready);
 
@@ -1567,7 +1568,18 @@ async function loadTtsSettings() {
     const voicevoxCheckbox = document.getElementById("voicevoxEnabled");
     const status = document.getElementById("ttsStatusText");
 
-    if (select) select.value = backend;
+    if (select) {
+      select.innerHTML = "";
+      for (const name of availableBackends) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      }
+      if (availableBackends.includes(backend)) {
+        select.value = backend;
+      }
+    }
     if (voicevoxCheckbox) voicevoxCheckbox.checked = voicevoxEnabled;
     if (status) {
       status.textContent = ` 現在: ${backend} / Piper Plus: ${piperPlusReady ? "OK" : "NG"} / VOICEVOX: ${voicevoxEnabled ? "ON" : "OFF"}`;
