@@ -52,3 +52,33 @@ app_settings.json
 docs/backups/
 docs/pending_patch.json
 dev_assistant/review_history.json
+# Virtual environments
+.venv*/
+venv/
+env/
+
+# Tool directories
+tools/Style-Bert-VITS2/
+tools/piper-plus/
+tools/FFmpeg/
+
+# Generated outputs
+outputs/
+personality_snapshots/
+
+# Backup files
+*.bak
+*.bak_*
+
+# Temporary patch/test scripts
+patch_*.py
+test_*.py
+create_esd_list*.py
+recreate_esd_list*.py
+
+# Runtime memory
+memory/embedding_memories.json
+
+# TTS local settings
+tts_settings.json
+speaker_settings.json
