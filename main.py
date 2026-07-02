@@ -2154,7 +2154,30 @@ def tts_status():
 
 @app.post("/tts")
 def tts(req: TTSRequest):
+    from pathlib import Path
     try:
+        config = load_speaker_config()
+        backend = config.get("tts_backend", "")
+
+        if backend == "style_bert_vits2":
+            from voice.stylebert_vits2_client import stylebert_say
+
+            result = stylebert_say(
+                req.text,
+                model_id=int(config.get("stylebert_model_id", 0)),
+                speaker_id=int(config.get("stylebert_speaker_id", 0)),
+                style=config.get("stylebert_style", "Neutral"),
+                style_weight=float(config.get("stylebert_style_weight", 5.0)),
+                length=float(config.get("stylebert_length", 1.0)),
+            )
+
+            audio = Path(result["output_file"]).read_bytes()
+
+            return StreamingResponse(
+                BytesIO(audio),
+                media_type="audio/wav"
+            )
+
         audio = synthesize_voice(
             req.text,
             speaker=req.speaker,
@@ -2169,4 +2192,6 @@ def tts(req: TTSRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
