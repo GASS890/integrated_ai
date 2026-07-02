@@ -11,6 +11,10 @@ DEFAULT_SETTINGS = {
     "fallback_backend": "voicevox",
     "speaker": 1,
     "auto_fallback": True,
+    "voicevox_enabled": False,
+    "stylebert_enabled": True,
+    "piper_enabled": True,
+    "piper_plus_enabled": True,
 }
 
 

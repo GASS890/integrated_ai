@@ -3,15 +3,16 @@ from voice.piper_client import synthesize_piper, is_piper_ready
 from voice.piper_plus_client import synthesize_piper_plus, is_piper_plus_ready
 from voice.tts_settings import load_tts_settings, save_tts_settings, get_default_tts_backend
 from voice.tts_status import get_tts_status, get_available_tts_backends
+from voice.engine_registry import get_engine_names
 
 
 def update_tts_settings(settings: dict) -> dict:
     backend = (settings or {}).get("backend")
-    if backend and backend not in ["voicevox", "piper", "piper_plus", "auto"]:
+    if backend and backend not in get_engine_names():
         raise ValueError(f"Unknown TTS backend: {backend}")
 
     fallback = (settings or {}).get("fallback_backend")
-    if fallback and fallback not in ["voicevox", "piper", "piper_plus", "auto"]:
+    if fallback and fallback not in get_engine_names():
         raise ValueError(f"Unknown fallback TTS backend: {fallback}")
 
     return save_tts_settings(settings or {})

@@ -3,9 +3,10 @@
 from voice.piper_client import is_piper_ready
 from voice.piper_plus_client import is_piper_plus_ready
 from voice.tts_settings import load_tts_settings, get_default_tts_backend
+from voice.engine_registry import get_engine_names
 
 
-AVAILABLE_BACKENDS = ["voicevox", "piper", "piper_plus", "auto"]
+AVAILABLE_BACKENDS = get_engine_names()
 
 
 def get_available_tts_backends() -> dict:
