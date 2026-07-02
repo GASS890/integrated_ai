@@ -1,7 +1,6 @@
-﻿import os
 import subprocess
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from config.app_config import STYLEBERT_SERVER_BAT, VOICEVOX_EXE
 
 
 def launch_service(name: str):
@@ -16,17 +15,12 @@ def launch_service(name: str):
         return
 
     if name == "stylebert":
-        script = os.path.join(
-            BASE_DIR,
-            "tools",
-            "Style-Bert-VITS2",
-            "Server.bat",
-        )
+        script = STYLEBERT_SERVER_BAT
 
-        if os.path.exists(script):
+        if script.exists():
             subprocess.Popen(
-                [script],
-                cwd=os.path.dirname(script),
+                [str(script)],
+                cwd=str(script.parent),
                 shell=True,
             )
         else:
@@ -35,15 +29,11 @@ def launch_service(name: str):
         return
 
     if name == "voicevox":
-        exe = os.path.join(
-            BASE_DIR,
-            "VOICEVOX",
-            "VOICEVOX.exe",
-        )
+        exe = VOICEVOX_EXE
 
-        if os.path.exists(exe):
+        if exe.exists():
             subprocess.Popen(
-                [exe],
+                [str(exe)],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )

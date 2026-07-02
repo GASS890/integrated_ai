@@ -17,6 +17,13 @@
 5. AI同士会話学習
 ## 変更履歴
 
+### v0.47.03
+- Config Registry を導入
+- config/app_config.py を追加
+- FastAPI / Style-Bert / VOICEVOX / Ollama の基本設定を一元管理
+- services/service_launcher.py のパス参照を config 経由へ変更
+
+
 ### v0.47.02
 - Startup Manager から Service Launcher を分離
 - services/service_launcher.py を追加
