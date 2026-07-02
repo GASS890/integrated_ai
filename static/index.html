@@ -325,6 +325,10 @@
     <option value="piper">Piper</option>
     <option value="auto">Auto</option>
   </select>
+  <label style="margin-left:12px;">
+    <input type="checkbox" id="voicevoxEnabled">
+    VOICEVOXを予備として使用
+  </label>
   <span>Style-Bertモデル:</span>
 <select id="stylebertModel"></select>
 <button onclick="loadStyleBertModels()">更新</button>
@@ -1555,22 +1559,31 @@ async function loadTtsSettings() {
     const res = await fetch("/tts/status");
     const data = await res.json();
 
-    const backend = data.default_backend || "voicevox";
+    const backend = (data.settings && data.settings.backend) || data.default_backend || "voicevox";
+    const voicevoxEnabled = !!(data.settings && data.settings.voicevox_enabled);
+    const piperPlusReady = !!(data.backends && data.backends.piper_plus && data.backends.piper_plus.ready);
+
     const select = document.getElementById("ttsBackend");
+    const voicevoxCheckbox = document.getElementById("voicevoxEnabled");
     const status = document.getElementById("ttsStatusText");
 
     if (select) select.value = backend;
+    if (voicevoxCheckbox) voicevoxCheckbox.checked = voicevoxEnabled;
     if (status) {
-      status.textContent = ` 現在: ${backend} / Piper Plus: ${data.piper_plus_ready ? "OK" : "NG"}`;
+      status.textContent = ` 現在: ${backend} / Piper Plus: ${piperPlusReady ? "OK" : "NG"} / VOICEVOX: ${voicevoxEnabled ? "ON" : "OFF"}`;
     }
   } catch (e) {
     console.error("tts status error", e);
+    const status = document.getElementById("ttsStatusText");
+    if (status) status.textContent = " TTS状態取得失敗";
   }
 }
 
 async function saveTtsSettings() {
   const select = document.getElementById("ttsBackend");
+  const voicevoxCheckbox = document.getElementById("voicevoxEnabled");
   const backend = select ? select.value : "voicevox";
+  const voicevoxEnabled = voicevoxCheckbox ? voicevoxCheckbox.checked : false;
 
   const res = await fetch("/tts/settings", {
     method: "POST",
@@ -1579,7 +1592,8 @@ async function saveTtsSettings() {
       backend: backend,
       fallback_backend: "voicevox",
       speaker: 1,
-      auto_fallback: true
+      auto_fallback: true,
+      voicevox_enabled: voicevoxEnabled
     })
   });
 
