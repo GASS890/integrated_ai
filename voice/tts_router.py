@@ -1,9 +1,14 @@
-﻿from voice.voicevox_client import synthesize_voice as synthesize_voicevox
-from voice.piper_client import synthesize_piper, is_piper_ready
-from voice.piper_plus_client import synthesize_piper_plus, is_piper_plus_ready
 from voice.tts_settings import load_tts_settings, save_tts_settings, get_default_tts_backend
 from voice.tts_status import get_tts_status, get_available_tts_backends
 from voice.engine_registry import get_engine_names
+from voice.engines import voicevox, piper, piper_plus
+
+
+ENGINE_PLUGINS = {
+    "voicevox": voicevox,
+    "piper": piper,
+    "piper_plus": piper_plus,
+}
 
 
 def update_tts_settings(settings: dict) -> dict:
@@ -18,33 +23,40 @@ def update_tts_settings(settings: dict) -> dict:
     return save_tts_settings(settings or {})
 
 
-def _is_voicevox_enabled() -> bool:
-    settings = load_tts_settings()
+def _is_voicevox_enabled(settings: dict | None = None) -> bool:
+    settings = settings or load_tts_settings()
     return bool(settings.get("voicevox_enabled", False))
 
 
-def _synthesize_selected(text: str, speaker: int, selected: str) -> bytes:
-    if selected == "piper_plus":
-        return synthesize_piper_plus(text, speaker=speaker)
+def _synthesize_engine(text: str, speaker: int, selected: str, settings: dict) -> bytes:
+    if selected == "voicevox" and not _is_voicevox_enabled(settings):
+        raise RuntimeError("VOICEVOX is disabled by settings.")
 
-    if selected == "piper":
-        return synthesize_piper(text, speaker=speaker)
+    engine = ENGINE_PLUGINS.get(selected)
+    if engine is None:
+        raise ValueError(f"Unknown TTS backend: {selected}")
 
-    if selected == "voicevox":
-        if not _is_voicevox_enabled():
-            raise RuntimeError("VOICEVOX is disabled by settings.")
-        return synthesize_voicevox(text, speaker=speaker)
+    return engine.synthesize(text, speaker=speaker)
 
+
+def _synthesize_auto(text: str, speaker: int, settings: dict) -> bytes:
+    if piper_plus.is_ready():
+        return piper_plus.synthesize(text, speaker=speaker)
+
+    if piper.is_ready():
+        return piper.synthesize(text, speaker=speaker)
+
+    if _is_voicevox_enabled(settings):
+        return voicevox.synthesize(text, speaker=speaker)
+
+    raise RuntimeError("No available TTS backend. VOICEVOX is disabled.")
+
+
+def _synthesize_selected(text: str, speaker: int, selected: str, settings: dict) -> bytes:
     if selected == "auto":
-        if is_piper_plus_ready():
-            return synthesize_piper_plus(text, speaker=speaker)
-        if is_piper_ready():
-            return synthesize_piper(text, speaker=speaker)
-        if _is_voicevox_enabled():
-            return synthesize_voicevox(text, speaker=speaker)
-        raise RuntimeError("No available TTS backend. VOICEVOX is disabled.")
+        return _synthesize_auto(text, speaker, settings)
 
-    raise ValueError(f"Unknown TTS backend: {selected}")
+    return _synthesize_engine(text, speaker, selected, settings)
 
 
 def synthesize_voice(text: str, speaker: int = 1, backend: str | None = None) -> bytes:
@@ -53,7 +65,7 @@ def synthesize_voice(text: str, speaker: int = 1, backend: str | None = None) ->
     speaker = int(speaker or settings.get("speaker", 1))
 
     try:
-        return _synthesize_selected(text, speaker, selected)
+        return _synthesize_selected(text, speaker, selected, settings)
     except Exception:
         if not settings.get("auto_fallback", True):
             raise
@@ -64,6 +76,4 @@ def synthesize_voice(text: str, speaker: int = 1, backend: str | None = None) ->
         if fallback == "voicevox" and not settings.get("voicevox_enabled", False):
             raise RuntimeError("Fallback VOICEVOX is disabled by settings.")
 
-        return _synthesize_selected(text, speaker, fallback)
-
-
+        return _synthesize_selected(text, speaker, fallback, settings)

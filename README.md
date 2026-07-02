@@ -17,6 +17,13 @@
 5. AI同士会話学習
 ## 変更履歴
 
+### v0.47.05
+- Voice Engine Plugin方式へ移行
+- voice/engines を追加
+- VOICEVOX / Piper / Piper Plus をエンジンプラグイン化
+- tts_router.py をエンジンプラグイン経由の合成処理へ整理
+
+
 ### v0.47.04
 - Service Plugin方式へ移行
 - services/plugins を追加
