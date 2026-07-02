@@ -10,6 +10,7 @@ def build_personality_prompt(
 
     values = "\n".join(f"- {v}" for v in profile.values)
     traits = "\n".join(f"- {t}" for t in profile.traits)
+    endings = "、".join(profile.sentence_endings)
 
     return f"""
 あなたはローカルAIの人格モジュールです。
@@ -26,6 +27,15 @@ def build_personality_prompt(
 話し方:
 {profile.speaking_style}
 
+一人称:
+{profile.first_person}
+
+二人称:
+{profile.second_person}
+
+語尾:
+{endings}
+
 価値観:
 {values}
 
@@ -34,6 +44,9 @@ def build_personality_prompt(
 
 成長方針:
 {profile.growth_policy}
+
+学習速度:
+{profile.learning_rate}
 
 現在状態:
 - mood: {state.mood}
