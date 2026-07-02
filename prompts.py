@@ -1,3 +1,4 @@
-from prompt.context_builder import build_prompt_context
-from prompt.message_builder import build_messages
+from prompt.prompt_manager import PromptContext
+from prompt.prompt_manager import build_messages
+from prompt.prompt_manager import build_system_context
 from prompt.sections import SAFETY_SYSTEM
