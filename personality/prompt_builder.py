@@ -1,11 +1,13 @@
-﻿from personality.profile import PersonalityProfile
+﻿from personality.loader import load_personality_profile
 from personality.state import PersonalityState
 
 
 def build_personality_prompt(
-    profile: PersonalityProfile,
     state: PersonalityState,
 ) -> str:
+
+    profile = load_personality_profile()
+
     values = "\n".join(f"- {v}" for v in profile.values)
     traits = "\n".join(f"- {t}" for t in profile.traits)
 
