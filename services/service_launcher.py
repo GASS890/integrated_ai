@@ -1,45 +1,20 @@
-import subprocess
+from services.plugins import ollama
+from services.plugins import stylebert
+from services.plugins import voicevox
 
-from config.app_config import STYLEBERT_SERVER_BAT, VOICEVOX_EXE
+
+PLUGINS = {
+    "ollama": ollama.launch,
+    "stylebert": stylebert.launch,
+    "voicevox": voicevox.launch,
+}
 
 
 def launch_service(name: str):
+    launcher = PLUGINS.get(name)
 
-    if name == "ollama":
-        subprocess.Popen(
-            ["ollama", "serve"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            shell=True,
-        )
+    if launcher is None:
+        print("Unknown service:", name)
         return
 
-    if name == "stylebert":
-        script = STYLEBERT_SERVER_BAT
-
-        if script.exists():
-            subprocess.Popen(
-                [str(script)],
-                cwd=str(script.parent),
-                shell=True,
-            )
-        else:
-            print("Style-Bert-VITS2 Server.bat not found:", script)
-
-        return
-
-    if name == "voicevox":
-        exe = VOICEVOX_EXE
-
-        if exe.exists():
-            subprocess.Popen(
-                [str(exe)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        else:
-            print("VOICEVOX.exe not found:", exe)
-
-        return
-
-    print("Unknown service:", name)
+    launcher()

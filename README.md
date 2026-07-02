@@ -17,6 +17,13 @@
 5. AI同士会話学習
 ## 変更履歴
 
+### v0.47.04
+- Service Plugin方式へ移行
+- services/plugins を追加
+- Ollama / Style-Bert / VOICEVOX をプラグイン化
+- service_launcher.py をPlugin Dispatcherへ変更
+
+
 ### v0.47.03
 - Config Registry を導入
 - config/app_config.py を追加
