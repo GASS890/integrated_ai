@@ -1,17 +1,10 @@
-﻿import json
-from pathlib import Path
 
 from personality.profile import PersonalityProfile
-
-PROFILE_PATH = (
-    Path(__file__).resolve().parent
-    / "personality_profile.json"
-)
+from personality.profile_manager import load_profile_data
 
 
 def load_personality_profile() -> PersonalityProfile:
-    with open(PROFILE_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = load_profile_data()
 
     identity = data.get("identity", {})
     speech = data.get("speech", {})
