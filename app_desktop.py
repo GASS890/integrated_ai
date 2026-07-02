@@ -52,8 +52,12 @@ def start_voicevox():
 if __name__ == "__main__":
     start_ollama()
 
-    # VOICEVOX is optional.
-    # start_voicevox()
+    try:
+        from voice.tts_settings import load_tts_settings
+        if load_tts_settings().get("voicevox_enabled", False):
+            start_voicevox()
+    except Exception as e:
+        print("VOICEVOX optional startup skipped:", e)
 
     server_thread = threading.Thread(
         target=start_server,
