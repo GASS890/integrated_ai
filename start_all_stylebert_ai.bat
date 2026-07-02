@@ -2,7 +2,7 @@
 cd /d %~dp0
 
 echo Starting Style-Bert-VITS2 API...
-start "Style-Bert API" cmd /k "cd /d Style-Bert-VITS2 && python server_fastapi.py"
+start "Style-Bert API" cmd /k "cd /d tools\Style-Bert-VITS2 && python server_fastapi.py"
 
 timeout /t 5 /nobreak > nul
 
