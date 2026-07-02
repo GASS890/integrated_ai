@@ -49,8 +49,30 @@ def start_voicevox():
             print("VOICEVOX起動失敗:", e)
 
 
+def start_stylebert():
+    script = os.path.join(
+        BASE_DIR,
+        "tools",
+        "Style-Bert-VITS2",
+        "Server.bat"
+    )
+
+    if os.path.exists(script):
+        try:
+            subprocess.Popen(
+                [script],
+                cwd=os.path.dirname(script),
+                shell=True
+            )
+        except Exception as e:
+            print("Style-Bert-VITS2 start failed:", e)
+    else:
+        print("Style-Bert-VITS2 Server.bat not found:", script)
+
+
 if __name__ == "__main__":
     start_ollama()
+    start_stylebert()
 
     try:
         from voice.tts_settings import load_tts_settings
