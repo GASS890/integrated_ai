@@ -15,7 +15,39 @@
 3. OpenAI API
 4. thinking loop
 5. AI同士会話学習
+
+## アーキテクチャ
+
+### config/
+アプリ全体の設定値を管理する。FastAPI、Style-Bert、VOICEVOX、Ollamaなどのポート・パスを集約する。
+
+### services/
+外部サービスの起動管理を担当する。Service Registry、Service Launcher、Service Pluginで構成する。
+
+### voice/
+TTS音声合成を担当する。Voice Engine Registry、Voice Engine Plugin、TTS Routerで構成する。
+
+### personality/
+人格・性格・口調・状態の管理を担当する。今後の人格生成フェーズの中心となる。
+
+### memory/
+短期記憶・長期記憶・Embedding検索などを担当する。
+
+### static/
+GUIフロントエンドを担当する。
+
+### dev_assistant/
+Developer Agent関連の変更提案・適用・レビュー処理を担当する。
+
+
 ## 変更履歴
+
+### v0.48.00
+- AI基盤完成版として README にアーキテクチャを追加
+- personality フォルダの骨組みを作成
+- PersonalityProfile / PersonalityState / prompt_builder を追加
+- 人格生成フェーズへ入るための土台を整備
+
 
 ### v0.47.05
 - Voice Engine Plugin方式へ移行
