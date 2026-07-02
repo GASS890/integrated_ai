@@ -31,7 +31,8 @@ def get_tts_status() -> dict:
         "available_backends": AVAILABLE_BACKENDS,
         "backends": {
             "voicevox": {
-                "ready": True,
+                "ready": bool(settings.get("voicevox_enabled", False)),
+                "enabled": bool(settings.get("voicevox_enabled", False)),
                 "role": "fallback",
             },
             "piper": {
@@ -56,3 +57,4 @@ def get_tts_status() -> dict:
             "cloud": "バックアップ・同期",
         },
     }
+

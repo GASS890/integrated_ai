@@ -3,15 +3,9 @@
 REM 1. このバッチ自身のあるフォルダへ移動
 cd /d %~dp0
 
-REM 2. === VOICEVOX 起動 ===
-if exist "%~dp0VOICEVOX\VOICEVOX.exe" (
-    start "" /min "%~dp0VOICEVOX\VOICEVOX.exe"
-) else (
-    echo.
-    echo ❌ VOICEVOX.exe が見つかりません
-    echo 👉 VOICEVOX\VOICEVOX.exe に配置してください
-    echo.
-)
+REM 2. === VOICEVOX startup ===
+REM VOICEVOX is optional now. Do not auto-start it.
+REM Start VOICEVOX\VOICEVOX.exe manually if needed.
 
 REM 3. ===Ollama を起動（既に起動していても問題なし）===
 start "" ollama serve
