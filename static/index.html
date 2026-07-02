@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -325,7 +325,11 @@
     <option value="piper">Piper</option>
     <option value="auto">Auto</option>
   </select>
-  <button onclick="saveTtsSettings()">音声設定保存</button>
+  <span>Style-Bertモデル:</span>
+<select id="stylebertModel"></select>
+<button onclick="loadStyleBertModels()">更新</button>
+<button onclick="saveStyleBertModel()">モデル変更</button>
+<button onclick="saveTtsSettings()">音声設定保存</button>
   <span id="ttsStatusText"></span>
 </div>
 
@@ -1588,7 +1592,88 @@ async function saveTtsSettings() {
   alert("音声設定を保存しました");
 }
 
-window.addEventListener("load", loadTtsSettings);
+
+async function loadStyleBertModels(){
+
+    const res=await fetch("/stylebert/models");
+
+    const data=await res.json();
+
+    const select=document.getElementById("stylebertModel");
+
+    if(!select)return;
+
+    select.innerHTML="";
+
+    for(const m of data.models){
+
+        const opt=document.createElement("option");
+
+        opt.value=m.model_id;
+
+        opt.textContent=m.name;
+
+        if(m.model_id===data.selected_model_id){
+
+            opt.selected=true;
+
+        }
+
+        select.appendChild(opt);
+
+    }
+
+}
+
+async function saveStyleBertModel(){
+
+    const select=document.getElementById("stylebertModel");
+
+    const modelId=Number(select.value);
+
+    const res=await fetch("/stylebert/models");
+
+    const data=await res.json();
+
+    const model=data.models.find(x=>x.model_id===modelId);
+
+    if(!model){
+
+        alert("モデルが見つかりません");
+
+        return;
+
+    }
+
+    await fetch("/stylebert/select",{
+
+        method:"POST",
+
+        headers:{"Content-Type":"application/json"},
+
+        body:JSON.stringify({
+
+            model_name:model.name,
+
+            speaker_id:0,
+
+            style:"Neutral",
+
+            style_weight:5.0,
+
+            length:1.0
+
+        })
+
+    });
+
+    alert("Style-Bertモデルを変更しました");
+
+}
+
+window.addEventListener("load", async ()=>{ await loadTtsSettings(); await loadStyleBertModels(); });
 
 </script></body>
 </html>
+
+
