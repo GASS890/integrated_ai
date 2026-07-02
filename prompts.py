@@ -7,6 +7,32 @@ SAFETY_SYSTEM = """\
 - 個人情報・機密情報の取り扱いに注意する
 """
 
+
+def build_prompt_context(
+    rules_text: str = "",
+    personality_text: str = "",
+    memories_text: str = "",
+    summary_text: str = "",
+) -> str:
+    sections = []
+
+    sections.append(SAFETY_SYSTEM)
+
+    if rules_text:
+        sections.append("【ルール】\n" + rules_text)
+
+    if personality_text:
+        sections.append("【人格】\n" + personality_text)
+
+    if memories_text:
+        sections.append("【記憶】\n" + memories_text)
+
+    if summary_text:
+        sections.append("【これまでの会話要約】\n" + summary_text)
+
+    return "\n\n".join(sections)
+
+
 def build_messages(
     user_text: str,
     history: list,
@@ -17,24 +43,17 @@ def build_messages(
 ):
     messages = []
 
-    system_parts = [SAFETY_SYSTEM]
+    system_context = build_prompt_context(
+        rules_text=rules_text,
+        personality_text=personality_text,
+        memories_text=memories_text,
+        summary_text=summary_text,
+    )
 
-    if rules_text:
-        system_parts.append(rules_text)
-
-    if personality_text:
-        system_parts.append(personality_text)
-
-    if memories_text:
-        system_parts.append(memories_text)
-
-    if summary_text:
-        system_parts.append("【これまでの会話要約】\n" + summary_text)
-
-    if system_parts:
+    if system_context:
         messages.append({
             "role": "system",
-            "content": "\n\n".join(system_parts),
+            "content": system_context,
         })
 
     for m in history or []:
