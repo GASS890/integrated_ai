@@ -966,16 +966,25 @@ def queue_assistant_reply_to_speaker(assistant_text: str):
         return None
 
     try:
-        config = load_speaker_config()
-        if not config.get("auto_enqueue_ai_response", True):
-            return {
-                "status": "skipped",
-                "reason": "auto_enqueue_ai_response is false",
-            }
-    except Exception as e:
-        print("speaker config load error:", e)
+        from speaker.speaker_config import load_speaker_config
 
-    try:
+        config = load_speaker_config()
+        backend = config.get("tts_backend", "")
+
+        if backend == "style_bert_vits2":
+            from voice.stylebert_vits2_client import stylebert_say
+
+            result = stylebert_say(
+                text,
+                model_id=int(config.get("stylebert_model_id", 0)),
+                speaker_id=int(config.get("stylebert_speaker_id", 0)),
+                style=config.get("stylebert_style", "Neutral"),
+                style_weight=float(config.get("stylebert_style_weight", 5.0)),
+                length=float(config.get("stylebert_length", 1.0)),
+            )
+            speaker_queue_add(result["output_file"])
+            return result
+
         result = speaker_say(
             text,
             backend=None,
@@ -983,6 +992,7 @@ def queue_assistant_reply_to_speaker(assistant_text: str):
         )
         speaker_queue_add(result["output_file"])
         return result
+
     except Exception as e:
         print("assistant speaker queue error:", e)
         return None

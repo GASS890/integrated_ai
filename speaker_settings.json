@@ -1,9 +1,14 @@
 {
   "mode": "local",
   "device_role": "speaker",
-  "tts_backend": "piper_plus",
+  "tts_backend": "style_bert_vits2",
   "auto_play": false,
   "auto_enqueue_ai_response": true,
   "output_dir": "outputs/tts",
-  "future_remote_url": ""
+  "future_remote_url": "",
+  "stylebert_model_id": 0,
+  "stylebert_speaker_id": 0,
+  "stylebert_style": "Neutral",
+  "stylebert_style_weight": 5.0,
+  "stylebert_length": 1.0
 }
