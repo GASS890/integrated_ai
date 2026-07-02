@@ -1,39 +1,42 @@
 ﻿from pathlib import Path
+import re
 
 path = Path("main.py")
 text = path.read_text(encoding="utf-8")
 
-insert_point = '@app.get("/tts/status")'
-pos = text.find(insert_point)
-if pos == -1:
-    raise RuntimeError("insert point not found: /tts/status")
-
-new_block = '''
+new_block = r'''
 @app.get("/stylebert/models")
 def stylebert_models():
     from pathlib import Path
 
     root = Path("tools/Style-Bert-VITS2/model_assets")
     models = []
+    model_id = 0
 
     if root.exists():
-        for i, item in enumerate(sorted(root.iterdir(), key=lambda p: p.name.lower())):
+        for item in sorted(root.iterdir(), key=lambda p: p.name.lower()):
             if not item.is_dir():
                 continue
 
+            has_config = (item / "config.json").exists()
+            has_style = (item / "style_vectors.npy").exists()
             model_files = list(item.glob("*.safetensors")) + list(item.glob("*.pth"))
+            ready = has_config and has_style and len(model_files) > 0
+
+            if not ready:
+                continue
 
             models.append({
-                "model_id": i,
+                "model_id": model_id,
                 "name": item.name,
                 "path": str(item),
-                "has_config": (item / "config.json").exists(),
-                "has_style_vectors": (item / "style_vectors.npy").exists(),
+                "has_config": has_config,
+                "has_style_vectors": has_style,
                 "model_file_count": len(model_files),
-                "ready": (item / "config.json").exists()
-                    and (item / "style_vectors.npy").exists()
-                    and len(model_files) > 0,
+                "ready": ready,
             })
+
+            model_id += 1
 
     config = load_speaker_config()
 
@@ -83,7 +86,16 @@ def stylebert_select(req: dict):
 
 '''
 
-text = text[:pos] + new_block + text[pos:]
+pattern = r'@app\.get\("/stylebert/models"\)\ndef stylebert_models\(\):.*?@app\.post\("/tts"\)'
+replacement = new_block + '@app.post("/tts")'
+
+if re.search(pattern, text, flags=re.S):
+    text = re.sub(pattern, replacement, text, flags=re.S)
+else:
+    marker = '@app.post("/tts")'
+    if marker not in text:
+        raise RuntimeError("insert marker not found")
+    text = text.replace(marker, new_block + marker, 1)
 
 path.write_text(text, encoding="utf-8")
-print("added /stylebert/models and /stylebert/select")
+print("stylebert model switch API safely patched")
