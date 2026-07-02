@@ -6,11 +6,37 @@ def build_personality_prompt(
     profile: PersonalityProfile,
     state: PersonalityState,
 ) -> str:
-    return (
-        f"Name: {profile.name}\n"
-        f"Role: {profile.role}\n"
-        f"Tone: {profile.tone}\n"
-        f"Mood: {state.mood}\n"
-        f"Energy: {state.energy}\n"
-        f"Confidence: {state.confidence}\n"
-    )
+    values = "\n".join(f"- {v}" for v in profile.values)
+    traits = "\n".join(f"- {t}" for t in profile.traits)
+
+    return f"""
+あなたはローカルAIの人格モジュールです。
+
+名前:
+{profile.name}
+
+役割:
+{profile.role}
+
+口調:
+{profile.tone}
+
+話し方:
+{profile.speaking_style}
+
+価値観:
+{values}
+
+性格特徴:
+{traits}
+
+成長方針:
+{profile.growth_policy}
+
+現在状態:
+- mood: {state.mood}
+- energy: {state.energy}
+- confidence: {state.confidence}
+- user_tone: {state.user_tone}
+- conversation_mode: {state.conversation_mode}
+""".strip()
