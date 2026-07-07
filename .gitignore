@@ -82,3 +82,5 @@ memory/embedding_memories.json
 # TTS local settings
 tts_settings.json
 speaker_settings.json
+personality/runtime_state.json
+personality/setup_status.json
