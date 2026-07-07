@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -101,6 +101,11 @@ from memory.embedding_store import load_embedding_memories, add_embedding_memory
 from personality.learning_config import describe_learning_strength
 from personality.tone_profile import update_tone_profile, build_tone_prompt, summarize_tone_profile
 from personality.growth_manager import update_growth_state, build_growth_prompt, summarize_growth_state
+from personality.setup_api import (
+    get_setup_info,
+    preview_setup_answers,
+    complete_setup_answers,
+)
 
 DEVELOPER_SESSION_ID = "__developer_chat__"
 DEVELOPER_SESSION_TITLE = "🛠 開発・改善専用"
@@ -852,6 +857,10 @@ class EmbeddingMemorySearchRequest(BaseModel):
 class MemoryDeleteRequest(BaseModel):
     memory_id: str
 
+
+class SetupRequest(BaseModel):
+    answers: dict = {}
+
 class TTSRequest(BaseModel):
     text: str
     speaker: int = 1
@@ -1114,6 +1123,25 @@ def is_improvement_proposal_text(
             for pattern in after_patterns
         )
     )
+
+
+# =========================================================
+# Initial Setup Wizard
+# =========================================================
+
+@app.get("/setup")
+def setup_info():
+    return get_setup_info()
+
+
+@app.post("/setup/preview")
+def setup_preview(req: SetupRequest):
+    return preview_setup_answers(req.answers)
+
+
+@app.post("/setup/complete")
+def setup_complete(req: SetupRequest):
+    return complete_setup_answers(req.answers)
 
 @app.get("/app_settings")
 def get_app_settings():
