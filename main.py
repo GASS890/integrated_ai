@@ -101,6 +101,10 @@ from memory.embedding_store import load_embedding_memories, add_embedding_memory
 from personality.learning_config import describe_learning_strength
 from personality.tone_profile import update_tone_profile, build_tone_prompt, summarize_tone_profile
 from personality.growth_manager import update_growth_state, build_growth_prompt, summarize_growth_state
+from personality.profile_editor_api import (
+    get_profile_editor_info,
+    save_active_profile,
+)
 from personality.setup_api import (
     get_setup_info,
     preview_setup_answers,
@@ -858,6 +862,10 @@ class MemoryDeleteRequest(BaseModel):
     memory_id: str
 
 
+
+class ProfileEditorRequest(BaseModel):
+    profile: dict = {}
+
 class SetupRequest(BaseModel):
     answers: dict = {}
 
@@ -1124,6 +1132,20 @@ def is_improvement_proposal_text(
         )
     )
 
+
+
+# =========================================================
+# Profile Editor
+# =========================================================
+
+@app.get("/profile/editor")
+def profile_editor_info():
+    return get_profile_editor_info()
+
+
+@app.post("/profile/editor/save")
+def profile_editor_save(req: ProfileEditorRequest):
+    return save_active_profile(req.profile)
 
 # =========================================================
 # Initial Setup Wizard
