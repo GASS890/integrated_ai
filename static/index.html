@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -465,7 +465,22 @@
   <pre id="changeHistoryContent" style="white-space:pre-wrap;"></pre>
 </div>
 
-        <div id="chat" class="chat"></div>
+        
+        <div id="setupWizard" style="display:none; padding:20px; margin:12px; border:1px solid #ccc; border-radius:12px; background:#fff;">
+          <h2>初期設定</h2>
+          <p id="setupProgress"></p>
+          <h3 id="setupQuestionLabel"></h3>
+          <p id="setupQuestionText"></p>
+          <input id="setupAnswerInput" style="width:100%; padding:10px; font-size:14px; border:1px solid #ccc; border-radius:8px;">
+          <div style="margin-top:12px;">
+            <button onclick="setupPrev()">戻る</button>
+            <button onclick="setupNext()">次へ</button>
+            <button onclick="setupFinish()">完了</button>
+          </div>
+          <pre id="setupPreview" style="white-space:pre-wrap; margin-top:12px; background:#f5f5f5; padding:10px; border-radius:8px;"></pre>
+        </div>
+
+<div id="chat" class="chat"></div>
 
         <div class="input-area">
           <textarea id="question" rows="2" placeholder="メッセージを入力"></textarea>
@@ -1432,12 +1447,161 @@ async function speak(text) {
   }
 }
 
-/* ===== 起動 ===== */
-initChats();
-initVoiceUI();
-bindGuiEditor();
 
-loadAppSettings();
+let setupQuestions = [];
+let setupAnswers = {};
+let setupIndex = 0;
+
+async function loadSetupWizard() {
+  try {
+    const res = await fetch("/setup");
+    const data = await res.json();
+
+    if (data.setup_complete) {
+      return true;
+    }
+
+    setupQuestions = data.questions || [];
+    setupAnswers = {};
+    setupIndex = 0;
+
+    showSetupWizard();
+    renderSetupQuestion();
+
+    return false;
+  } catch (e) {
+    console.warn("setup load failed:", e);
+    return true;
+  }
+}
+
+function showSetupWizard() {
+  const wizard = document.getElementById("setupWizard");
+  const chatBox = document.getElementById("chat");
+  const inputArea = document.querySelector(".input-area");
+  const sidebar = document.querySelector(".sidebar");
+
+  if (wizard) wizard.style.display = "block";
+  if (chatBox) chatBox.style.display = "none";
+  if (inputArea) inputArea.style.display = "none";
+  if (sidebar) sidebar.style.display = "none";
+}
+
+function hideSetupWizard() {
+  const wizard = document.getElementById("setupWizard");
+  const chatBox = document.getElementById("chat");
+  const inputArea = document.querySelector(".input-area");
+  const sidebar = document.querySelector(".sidebar");
+
+  if (wizard) wizard.style.display = "none";
+  if (chatBox) chatBox.style.display = "flex";
+  if (inputArea) inputArea.style.display = "flex";
+  if (sidebar) sidebar.style.display = "block";
+}
+
+function renderSetupQuestion() {
+  const q = setupQuestions[setupIndex];
+  if (!q) return;
+
+  const progress = document.getElementById("setupProgress");
+  const label = document.getElementById("setupQuestionLabel");
+  const text = document.getElementById("setupQuestionText");
+  const input = document.getElementById("setupAnswerInput");
+  const preview = document.getElementById("setupPreview");
+
+  if (progress) progress.innerText = `${setupIndex + 1} / ${setupQuestions.length}`;
+  if (label) label.innerText = q.label || q.key;
+  if (text) text.innerText = q.question || "";
+  if (input) input.value = setupAnswers[q.key] ?? q.default ?? "";
+  if (preview) preview.innerText = "";
+}
+
+function saveCurrentSetupAnswer() {
+  const q = setupQuestions[setupIndex];
+  const input = document.getElementById("setupAnswerInput");
+  if (!q || !input) return;
+
+  setupAnswers[q.key] = input.value;
+}
+
+function setupPrev() {
+  saveCurrentSetupAnswer();
+
+  if (setupIndex > 0) {
+    setupIndex -= 1;
+    renderSetupQuestion();
+  }
+}
+
+async function setupNext() {
+  saveCurrentSetupAnswer();
+
+  if (setupIndex < setupQuestions.length - 1) {
+    setupIndex += 1;
+    renderSetupQuestion();
+    return;
+  }
+
+  await setupPreview();
+}
+
+async function setupPreview() {
+  const preview = document.getElementById("setupPreview");
+
+  const res = await fetch("/setup/preview", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({answers: setupAnswers})
+  });
+
+  const data = await res.json();
+
+  if (preview) {
+    preview.innerText = JSON.stringify(data, null, 2);
+  }
+
+  return data;
+}
+
+async function setupFinish() {
+  saveCurrentSetupAnswer();
+
+  const res = await fetch("/setup/complete", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({answers: setupAnswers})
+  });
+
+  const data = await res.json();
+
+  if (!data.ok) {
+    const preview = document.getElementById("setupPreview");
+    if (preview) preview.innerText = JSON.stringify(data, null, 2);
+    return;
+  }
+
+  hideSetupWizard();
+
+  await initChats();
+
+  initVoiceUI();
+  bindGuiEditor();
+  loadAppSettings();
+}
+
+
+/* ===== 起動 ===== */
+(async () => {
+  const setupDone = await loadSetupWizard();
+
+  initVoiceUI();
+  bindGuiEditor();
+  loadAppSettings();
+
+  if (setupDone) {
+    await initChats();
+  }
+})();
 
 const developerAgentToggle =
     document.getElementById("developerAgentToggle");
