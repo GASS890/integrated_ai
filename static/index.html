@@ -428,6 +428,12 @@
         </label>
       </div>
 
+
+      <div style="margin-top:12px; border-top:1px solid #ddd; padding-top:10px;">
+        <button onclick="loadProfileEditor()">人格設定を表示</button>
+        <pre id="profileEditorView" style="white-space:pre-wrap; max-height:300px; overflow:auto; background:#f5f5f5; padding:10px; border-radius:8px;"></pre>
+      </div>
+
       <div>
         <label>速さ: <span id="speedValue">1.0</span></label>
         <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0">
@@ -870,6 +876,48 @@ function createStreamRenderer(contentDiv, getTextFn) {
 
   return { schedule, paint, cancel };
 }
+
+
+async function loadProfileEditor() {
+  const view = document.getElementById("profileEditorView");
+  if (!view) return;
+
+  view.innerText = "読み込み中...";
+
+  try {
+    const res = await fetch("/profile/editor");
+    const data = await res.json();
+
+    const profile = data.profile || {};
+    const identity = profile.identity || {};
+    const speech = profile.speech || {};
+    const personality = profile.personality || {};
+    const growth = profile.growth || {};
+    const voice = profile.voice || {};
+
+    view.innerText =
+      "【現在の人格】\n" +
+      "Profile ID: " + (data.active_profile_id || "") + "\n\n" +
+      "名前: " + (identity.name || "") + "\n" +
+      "役割: " + (identity.role || "") + "\n" +
+      "概要: " + (identity.concept || "") + "\n\n" +
+      "口調: " + (speech.tone || "") + "\n" +
+      "話し方: " + (speech.speaking_style || "") + "\n" +
+      "一人称: " + (speech.first_person || "") + "\n\n" +
+      "性格: " + JSON.stringify(personality.traits || [], null, 2) + "\n\n" +
+      "価値観: " + JSON.stringify(personality.values || [], null, 2) + "\n\n" +
+      "学習速度: " + (growth.learning_rate || "") + "\n" +
+      "学習方針: " + (growth.policy || "") + "\n\n" +
+      "音声: " + (voice.tts_backend || "") + "\n" +
+      "speaker: " + (voice.speaker ?? "") + "\n" +
+      "speed: " + (voice.speed ?? "") + "\n" +
+      "pitch: " + (voice.pitch ?? "") + "\n" +
+      "intonation: " + (voice.intonation ?? "");
+  } catch (e) {
+    view.innerText = "人格設定の読み込みに失敗しました: " + e;
+  }
+}
+
 
 async function loadAppSettings() {
   try {
