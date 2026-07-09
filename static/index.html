@@ -527,6 +527,8 @@
           <h3 id="setupQuestionLabel"></h3>
           <p id="setupQuestionText"></p>
           <input id="setupAnswerInput" style="width:100%; padding:10px; font-size:14px; border:1px solid #ccc; border-radius:8px;">
+          <select id="setupAnswerSelect" style="display:none; width:100%; padding:10px; font-size:14px; border:1px solid #ccc; border-radius:8px;"></select>
+
           <div style="margin-top:12px;">
             <button onclick="setupPrev()">戻る</button>
             <button onclick="setupNext()">次へ</button>
@@ -1689,21 +1691,53 @@ function renderSetupQuestion() {
   const label = document.getElementById("setupQuestionLabel");
   const text = document.getElementById("setupQuestionText");
   const input = document.getElementById("setupAnswerInput");
+  const select = document.getElementById("setupAnswerSelect");
   const preview = document.getElementById("setupPreview");
 
   if (progress) progress.innerText = `${setupIndex + 1} / ${setupQuestions.length}`;
   if (label) label.innerText = q.label || q.key;
   if (text) text.innerText = q.question || "";
-  if (input) input.value = setupAnswers[q.key] ?? q.default ?? "";
+
+  const value = setupAnswers[q.key] ?? q.default ?? "";
+
+  if (q.choices && Array.isArray(q.choices)) {
+    if (input) input.style.display = "none";
+    if (select) {
+      select.style.display = "block";
+      select.innerHTML = "";
+      q.choices.forEach(choice => {
+        const option = document.createElement("option");
+        option.value = choice;
+        option.innerText = choice;
+        select.appendChild(option);
+      });
+      select.value = value;
+    }
+  } else {
+    if (select) select.style.display = "none";
+    if (input) {
+      input.style.display = "block";
+      input.value = value;
+    }
+  }
+
   if (preview) preview.innerText = "";
 }
 
 function saveCurrentSetupAnswer() {
   const q = setupQuestions[setupIndex];
   const input = document.getElementById("setupAnswerInput");
-  if (!q || !input) return;
+  const select = document.getElementById("setupAnswerSelect");
+  if (!q) return;
 
-  setupAnswers[q.key] = input.value;
+  if (q.choices && Array.isArray(q.choices) && select) {
+    setupAnswers[q.key] = select.value;
+    return;
+  }
+
+  if (input) {
+    setupAnswers[q.key] = input.value;
+  }
 }
 
 function setupPrev() {
