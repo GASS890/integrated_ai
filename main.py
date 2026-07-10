@@ -105,6 +105,7 @@ from personality.profile_editor_api import (
     get_profile_editor_info,
     save_active_profile,
 )
+from prompt.debugger import build_prompt_debug_data
 from personality.setup_api import (
     get_setup_info,
     preview_setup_answers,
@@ -863,6 +864,16 @@ class MemoryDeleteRequest(BaseModel):
 
 
 
+
+class PromptDebugRequest(BaseModel):
+    user_text: str = ""
+    history: list = []
+    rules_text: str = ""
+    memories_text: str = ""
+    summary_text: str = ""
+    learning_text: str = ""
+    preferences_text: str = ""
+
 class ProfileEditorRequest(BaseModel):
     profile: dict = {}
 
@@ -1133,6 +1144,23 @@ def is_improvement_proposal_text(
     )
 
 
+
+
+# =========================================================
+# Prompt Debugger
+# =========================================================
+
+@app.post("/prompt/debug")
+def prompt_debug(req: PromptDebugRequest):
+    return build_prompt_debug_data(
+        user_text=req.user_text,
+        history=req.history,
+        rules_text=req.rules_text,
+        memories_text=req.memories_text,
+        summary_text=req.summary_text,
+        learning_text=req.learning_text,
+        preferences_text=req.preferences_text,
+    )
 
 # =========================================================
 # Profile Editor
