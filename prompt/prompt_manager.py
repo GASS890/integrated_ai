@@ -1,4 +1,7 @@
-﻿from dataclasses import dataclass, field
+from dataclasses import dataclass, field
+
+from prompt.conversation_builder import build_conversation_messages
+from prompt.prompt_router import build_prompt_bundle
 
 from prompt.context_builder import build_prompt_context
 from prompt.message_builder import build_messages as build_raw_messages
@@ -38,3 +41,28 @@ def build_messages(
         memories_text=context.memories_text,
         summary_text=context.summary_text,
     )
+
+def build_routed_messages(
+    user_text: str,
+    history: list,
+    context: PromptContext | None = None,
+    learning_text: str = "",
+    preferences_text: str = "",
+):
+    if context is None:
+        context = PromptContext()
+
+    bundle = build_prompt_bundle(
+        rules_text=context.rules_text,
+        memories_text=context.memories_text,
+        summary_text=context.summary_text,
+        learning_text=learning_text,
+        preferences_text=preferences_text,
+    )
+
+    return build_conversation_messages(
+        user_text=user_text,
+        history=history,
+        bundle=bundle,
+    )
+
