@@ -4,6 +4,7 @@ from memory.prompt_builder import build_memory_prompt
 from personality.persona_manager import build_current_personality_prompt
 from personality.runtime_state import RuntimeState
 from personality.user_model_prompt import build_user_model_prompt
+from personality.reflection_engine import build_reflection_prompt
 from prompt.context_builder import build_prompt_context
 
 
@@ -13,6 +14,7 @@ class PromptBundle:
     personality_context: str = ""
     memory_context: str = ""
     user_model_context: str = ""
+    reflection_context: str = ""
     final_system_context: str = ""
     metadata: dict = field(default_factory=dict)
 
@@ -37,12 +39,14 @@ def build_prompt_bundle(
     )
 
     user_model_context = build_user_model_prompt()
+    reflection_context = build_reflection_prompt()
 
     combined_memory_context = "\n\n".join(
         section
         for section in (
             memory_context,
             user_model_context,
+            reflection_context,
         )
         if section
     )
@@ -59,11 +63,13 @@ def build_prompt_bundle(
         personality_context=personality_context,
         memory_context=memory_context,
         user_model_context=user_model_context,
+        reflection_context=reflection_context,
         final_system_context=final_system_context,
         metadata={
             "has_rules": bool(rules_text),
             "has_personality": bool(personality_context),
             "has_memory": bool(memory_context),
             "has_user_model": bool(user_model_context),
+            "has_reflection": bool(reflection_context),
         },
     )

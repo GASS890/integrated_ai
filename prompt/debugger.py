@@ -31,6 +31,7 @@ def build_prompt_debug_data(
         "personality_context": bundle.personality_context,
         "memory_context": bundle.memory_context,
         "user_model_context": bundle.user_model_context,
+        "reflection_context": bundle.reflection_context,
         "final_system_context": bundle.final_system_context,
         "messages": messages,
     }
