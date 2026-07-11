@@ -112,6 +112,11 @@ from personality.setup_api import (
     complete_setup_answers,
 )
 
+from personality.adaptive_runtime_coordinator import (
+    process_adaptive_input,
+    process_adaptive_output,
+)
+
 DEVELOPER_SESSION_ID = "__developer_chat__"
 DEVELOPER_SESSION_TITLE = "🛠 開発・改善専用"
 
@@ -1728,6 +1733,31 @@ def ask(req: AskRequest):
                 "personality": _ensure_personality(session),
             }
 
+        # Adaptive Runtime: 回答生成前の学習・重要記憶判定
+        try:
+            adaptive_input_result = process_adaptive_input(
+                user_text=q,
+                session_id=session_id,
+                explicit_memory=any(
+                    keyword in q
+                    for keyword in (
+                        "覚えて",
+                        "記憶して",
+                        "忘れないで",
+                    )
+                ),
+            )
+        except Exception as adaptive_error:
+            print(
+                "adaptive input error:",
+                type(adaptive_error).__name__,
+                adaptive_error,
+            )
+            adaptive_input_result = {
+                "executed": False,
+                "reason": "adaptive_input_error",
+            }
+
         intent = analyze_user_intent_llm(q)
 
         model = choose_model(q, session, intent=intent)
@@ -1806,6 +1836,32 @@ def ask(req: AskRequest):
                     "===== auto improvement save failed =====\n"
                     f"{type(e).__name__}: {e}"
                 )
+
+        # Adaptive Runtime: 回答後の感情・振り返り・成長処理
+        try:
+            adaptive_history = session.get(
+                "history",
+                session.get("messages", []),
+            )
+
+            adaptive_output_result = process_adaptive_output(
+                user_text=q,
+                assistant_text=answer,
+                history=adaptive_history,
+                session_id=session_id,
+                error_occurred=False,
+                success=False,
+            )
+        except Exception as adaptive_error:
+            print(
+                "adaptive output error:",
+                type(adaptive_error).__name__,
+                adaptive_error,
+            )
+            adaptive_output_result = {
+                "executed": False,
+                "reason": "adaptive_output_error",
+            }
 
         finalize_interaction(session_id, session, q, answer, intent=intent)
         return {
