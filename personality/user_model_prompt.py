@@ -1,6 +1,7 @@
 from personality.user_model import UserModel
 from personality.user_model_manager import load_user_model
 from personality.preference_detector import build_user_response_policy_prompt
+from personality.preference_history import build_long_term_preference_prompt
 
 
 def _format_scores(
@@ -53,6 +54,8 @@ def build_user_model_prompt(
 {_format_scores(model.conversation_style)}
 
 {build_user_response_policy_prompt(model)}
+
+{build_long_term_preference_prompt()}
 
 【利用規則】
 - スコアが高い項目ほど、回答形式や関連話題の候補として優先する
