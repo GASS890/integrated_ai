@@ -1,4 +1,4 @@
-﻿from prompt.conversation_builder import build_conversation_messages
+from prompt.conversation_builder import build_conversation_messages
 from prompt.prompt_router import build_prompt_bundle
 
 
@@ -30,6 +30,7 @@ def build_prompt_debug_data(
         "rules_context": bundle.safety_rules_context,
         "personality_context": bundle.personality_context,
         "memory_context": bundle.memory_context,
+        "user_model_context": bundle.user_model_context,
         "final_system_context": bundle.final_system_context,
         "messages": messages,
     }
