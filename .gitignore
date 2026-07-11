@@ -88,3 +88,4 @@ personality/user_model.json
 memory/importance_memories.json
 personality/preference_history.json
 personality/conversation_reflections.json
+personality/personality_growth_state.json

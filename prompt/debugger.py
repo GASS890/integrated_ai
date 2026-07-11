@@ -29,6 +29,7 @@ def build_prompt_debug_data(
         "metadata": bundle.metadata,
         "rules_context": bundle.safety_rules_context,
         "personality_context": bundle.personality_context,
+        "personality_growth_context": bundle.personality_growth_context,
         "memory_context": bundle.memory_context,
         "user_model_context": bundle.user_model_context,
         "reflection_context": bundle.reflection_context,

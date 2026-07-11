@@ -5,6 +5,7 @@ from personality.persona_manager import build_current_personality_prompt
 from personality.runtime_state import RuntimeState
 from personality.user_model_prompt import build_user_model_prompt
 from personality.reflection_engine import build_reflection_prompt
+from personality.personality_growth_manager import build_personality_growth_prompt
 from prompt.context_builder import build_prompt_context
 
 
@@ -12,6 +13,7 @@ from prompt.context_builder import build_prompt_context
 class PromptBundle:
     safety_rules_context: str = ""
     personality_context: str = ""
+    personality_growth_context: str = ""
     memory_context: str = ""
     user_model_context: str = ""
     reflection_context: str = ""
@@ -29,6 +31,19 @@ def build_prompt_bundle(
 ) -> PromptBundle:
     personality_context = build_current_personality_prompt(
         runtime_state
+    )
+
+    personality_growth_context = (
+        build_personality_growth_prompt()
+    )
+
+    personality_context = "\n\n".join(
+        section
+        for section in (
+            personality_context,
+            personality_growth_context,
+        )
+        if section
     )
 
     memory_context = build_memory_prompt(
@@ -61,6 +76,7 @@ def build_prompt_bundle(
     return PromptBundle(
         safety_rules_context=rules_text,
         personality_context=personality_context,
+        personality_growth_context=personality_growth_context,
         memory_context=memory_context,
         user_model_context=user_model_context,
         reflection_context=reflection_context,
@@ -68,6 +84,7 @@ def build_prompt_bundle(
         metadata={
             "has_rules": bool(rules_text),
             "has_personality": bool(personality_context),
+            "has_personality_growth": bool(personality_growth_context),
             "has_memory": bool(memory_context),
             "has_user_model": bool(user_model_context),
             "has_reflection": bool(reflection_context),
