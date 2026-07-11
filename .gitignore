@@ -85,3 +85,4 @@ speaker_settings.json
 personality/runtime_state.json
 personality/setup_status.json
 personality/user_model.json
+memory/importance_memories.json
