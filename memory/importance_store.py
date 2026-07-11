@@ -1,4 +1,4 @@
-﻿import json
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -52,6 +52,13 @@ def _save_items(
     return items
 
 
+
+def _normalize_memory_text(text: str) -> str:
+    return " ".join(
+        str(text or "").strip().lower().split()
+    )
+
+
 def add_importance_memory(
     text: str,
     source: str = "conversation",
@@ -63,6 +70,20 @@ def add_importance_memory(
         explicit=explicit,
         source=source,
     )
+
+    normalized_text = _normalize_memory_text(text)
+    items = _load_items()
+
+    for existing in items:
+        if (
+            _normalize_memory_text(
+                existing.get("text", "")
+            )
+            == normalized_text
+        ):
+            duplicate = dict(existing)
+            duplicate["duplicate"] = True
+            return duplicate
 
     item = {
         "memory_id": uuid4().hex,
@@ -76,7 +97,6 @@ def add_importance_memory(
         "metadata": metadata or {},
     }
 
-    items = _load_items()
     items.append(item)
     _save_items(items)
 

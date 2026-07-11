@@ -1,4 +1,7 @@
-﻿from personality.adaptive_event_detector import (
+from personality.adaptive_dedup import (
+    claim_adaptive_event,
+)
+from personality.adaptive_event_detector import (
     detect_emotion_event,
 )
 from personality.adaptive_runtime_config import (
@@ -99,6 +102,18 @@ def process_adaptive_input(
         result["reason"] = reason
         return result
 
+    dedup_result = claim_adaptive_event(
+        stage="input",
+        session_id=session_id,
+        user_text=text,
+    )
+
+    result["dedup"] = dedup_result
+
+    if not dedup_result.get("allowed", False):
+        result["reason"] = "duplicate_event"
+        return result
+
     state = load_adaptive_runtime_state()
     state["input_count"] += 1
 
@@ -195,6 +210,19 @@ def process_adaptive_output(
 
     if skip:
         result["reason"] = reason
+        return result
+
+    dedup_result = claim_adaptive_event(
+        stage="output",
+        session_id=session_id,
+        user_text=user_text,
+        assistant_text=assistant_text,
+    )
+
+    result["dedup"] = dedup_result
+
+    if not dedup_result.get("allowed", False):
+        result["reason"] = "duplicate_event"
         return result
 
     state = load_adaptive_runtime_state()
