@@ -481,6 +481,20 @@
         </div>
 
         <pre id="profileEditorView" style="white-space:pre-wrap; max-height:300px; overflow:auto; background:#f5f5f5; padding:10px; border-radius:8px;"></pre>
+      <div id="adaptiveRuntimePanel" style="margin-top:12px; border-top:1px solid #ddd; padding-top:12px;">
+        <h3 style="margin:0 0 8px 0;">適応・成長状態</h3>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <button onclick="loadAdaptiveStatus()">状態を更新</button>
+          <button onclick="resetAdaptiveRuntime()">実行状態をリセット</button>
+        </div>
+
+        <p id="adaptiveRuntimeMessage" style="margin:6px 0; font-size:13px;"></p>
+
+        <pre id="adaptiveRuntimeView"
+          style="white-space:pre-wrap; max-height:420px; overflow:auto; background:#f5f5f5; padding:10px; border-radius:8px; font-size:12px;"></pre>
+      </div>
+
       </div>
 
       <div>
@@ -931,6 +945,132 @@ function createStreamRenderer(contentDiv, getTextFn) {
 
 
 let profileEditorData = null;
+
+
+async function loadAdaptiveStatus() {
+  const view = document.getElementById(
+    "adaptiveRuntimeView"
+  );
+  const message = document.getElementById(
+    "adaptiveRuntimeMessage"
+  );
+
+  if (!view) return;
+
+  view.innerText = "読み込み中...";
+
+  if (message) {
+    message.innerText = "";
+  }
+
+  try {
+    const res = await fetch("/adaptive/status");
+
+    if (!res.ok) {
+      throw new Error(
+        `HTTP ${res.status}`
+      );
+    }
+
+    const data = await res.json();
+
+    const runtime = data.runtime || {};
+    const runtimeState = runtime.state || {};
+    const emotion = data.emotion || {};
+    const growth = data.personality_growth || {};
+    const userModel = data.user_model || {};
+    const reflection = data.latest_reflection || {};
+    const memories = data.important_memories || [];
+
+    const summary = {
+      adaptive_enabled: runtime.enabled,
+      counters: {
+        input_count: runtimeState.input_count || 0,
+        output_count: runtimeState.output_count || 0,
+        reflection_count: runtimeState.reflection_count || 0,
+        preference_snapshot_count:
+          runtimeState.preference_snapshot_count || 0,
+        emotion_decay_count:
+          runtimeState.emotion_decay_count || 0,
+      },
+      emotion,
+      personality_growth: growth,
+      user_model: userModel,
+      latest_reflection: reflection,
+      important_memories: memories,
+    };
+
+    view.innerText = JSON.stringify(
+      summary,
+      null,
+      2
+    );
+
+    if (message) {
+      message.innerText =
+        "適応・成長状態を更新しました。";
+    }
+  } catch (error) {
+    view.innerText =
+      "適応状態の取得に失敗しました。\n"
+      + String(error);
+
+    if (message) {
+      message.innerText =
+        "状態取得エラー";
+    }
+  }
+}
+
+
+async function resetAdaptiveRuntime() {
+  const message = document.getElementById(
+    "adaptiveRuntimeMessage"
+  );
+
+  try {
+    const res = await fetch("/adaptive/reset", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        scopes: [
+          "runtime",
+          "dedup",
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        `HTTP ${res.status}`
+      );
+    }
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error(
+        JSON.stringify(data.errors || [])
+      );
+    }
+
+    if (message) {
+      message.innerText =
+        "実行カウンターと重複判定履歴をリセットしました。";
+    }
+
+    await loadAdaptiveStatus();
+  } catch (error) {
+    if (message) {
+      message.innerText =
+        "リセットに失敗しました: "
+        + String(error);
+    }
+  }
+}
+
 
 async function loadProfileEditor() {
   const view = document.getElementById("profileEditorView");
