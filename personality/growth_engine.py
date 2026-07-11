@@ -1,105 +1,11 @@
-﻿from personality.user_model_manager import update_score
-
-
-INTEREST_KEYWORDS = {
-    "AI開発": [
-        "AI開発",
-        "ローカルAI",
-        "LLM",
-        "プロンプト",
-        "Prompt",
-        "人格AI",
-    ],
-    "Python": [
-        "Python",
-        "py_compile",
-        ".py",
-    ],
-    "FastAPI": [
-        "FastAPI",
-        "uvicorn",
-        "エンドポイント",
-        "API",
-    ],
-    "音声AI": [
-        "TTS",
-        "音声AI",
-        "Piper",
-        "VOICEVOX",
-        "Style-Bert",
-    ],
-}
-
-PREFERENCE_KEYWORDS = {
-    "PowerShell形式": [
-        "PowerShellで",
-        "powershellで",
-        "PowerShell形式",
-        "実行できる形式",
-    ],
-    "手順を細かく": [
-        "一つずつ",
-        "1つずつ",
-        "順番に",
-        "手順を",
-    ],
-    "コード全文": [
-        "全文",
-        "そのまま貼り付け",
-        "コピペ",
-    ],
-    "バージョン管理": [
-        "git commit",
-        "git push",
-        "タグ",
-        "バージョン",
-    ],
-}
-
-STYLE_KEYWORDS = {
-    "詳細さ": [
-        "詳しく",
-        "詳細に",
-        "細かく",
-    ],
-    "構造化": [
-        "整理して",
-        "項目ごと",
-        "順番に",
-    ],
-    "理由付き説明": [
-        "理由",
-        "なぜ",
-        "根拠",
-    ],
-}
-
-KNOWLEDGE_KEYWORDS = {
-    "AI": [
-        "LLM",
-        "Embedding",
-        "Prompt Router",
-        "RuntimeState",
-    ],
-    "Python": [
-        "dataclass",
-        "BaseModel",
-        "import",
-        "def ",
-    ],
-    "Git": [
-        "git add",
-        "git commit",
-        "git push",
-        "git tag",
-    ],
-    "FastAPI": [
-        "@app.get",
-        "@app.post",
-        "FastAPI",
-        "uvicorn",
-    ],
-}
+﻿from personality.growth_rules import (
+    GROWTH_RULES,
+    IGNORE_EXACT_TEXTS,
+    IGNORE_PREFIXES,
+    MAX_UPDATES_PER_MESSAGE,
+    MIN_TEXT_LENGTH,
+)
+from personality.user_model_manager import update_score
 
 
 def _contains_any(
@@ -114,27 +20,27 @@ def _contains_any(
     )
 
 
-def _apply_keyword_updates(
-    text: str,
-    category: str,
-    mapping: dict[str, list[str]],
-    amount: float,
-) -> list[dict]:
-    updates = []
+def should_observe_text(
+    user_text: str,
+) -> tuple[bool, str]:
+    text = str(user_text or "").strip()
 
-    for key, keywords in mapping.items():
-        if not _contains_any(text, keywords):
-            continue
+    if not text:
+        return False, "empty_text"
 
-        updates.append(
-            update_score(
-                category=category,
-                key=key,
-                amount=amount,
-            )
-        )
+    if len(text) < MIN_TEXT_LENGTH:
+        return False, "too_short"
 
-    return updates
+    if text in IGNORE_EXACT_TEXTS:
+        return False, "ignored_exact_text"
+
+    if any(
+        text.startswith(prefix)
+        for prefix in IGNORE_PREFIXES
+    ):
+        return False, "ignored_greeting"
+
+    return True, ""
 
 
 def observe_user_text(
@@ -142,53 +48,42 @@ def observe_user_text(
 ) -> dict:
     text = str(user_text or "").strip()
 
-    if not text:
+    should_observe, reason = should_observe_text(text)
+
+    if not should_observe:
         return {
             "observed": False,
-            "reason": "empty_text",
+            "reason": reason,
             "updates": [],
         }
 
     updates = []
 
-    updates.extend(
-        _apply_keyword_updates(
-            text=text,
-            category="interests",
-            mapping=INTEREST_KEYWORDS,
-            amount=0.02,
-        )
-    )
+    for category, rule in GROWTH_RULES.items():
+        amount = float(rule.get("amount", 0.01))
+        keywords_map = rule.get("keywords", {})
 
-    updates.extend(
-        _apply_keyword_updates(
-            text=text,
-            category="preferences",
-            mapping=PREFERENCE_KEYWORDS,
-            amount=0.03,
-        )
-    )
+        for key, keywords in keywords_map.items():
+            if len(updates) >= MAX_UPDATES_PER_MESSAGE:
+                break
 
-    updates.extend(
-        _apply_keyword_updates(
-            text=text,
-            category="conversation_style",
-            mapping=STYLE_KEYWORDS,
-            amount=0.02,
-        )
-    )
+            if not _contains_any(text, keywords):
+                continue
 
-    updates.extend(
-        _apply_keyword_updates(
-            text=text,
-            category="knowledge_level",
-            mapping=KNOWLEDGE_KEYWORDS,
-            amount=0.01,
-        )
-    )
+            updates.append(
+                update_score(
+                    category=category,
+                    key=key,
+                    amount=amount,
+                )
+            )
+
+        if len(updates) >= MAX_UPDATES_PER_MESSAGE:
+            break
 
     return {
         "observed": True,
         "text_length": len(text),
         "updates": updates,
+        "update_count": len(updates),
     }
