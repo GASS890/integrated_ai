@@ -6,6 +6,7 @@ from personality.runtime_state import RuntimeState
 from personality.user_model_prompt import build_user_model_prompt
 from personality.reflection_engine import build_reflection_prompt
 from personality.personality_growth_manager import build_personality_growth_prompt
+from personality.emotion_engine import build_emotion_prompt
 from prompt.context_builder import build_prompt_context
 
 
@@ -17,6 +18,7 @@ class PromptBundle:
     memory_context: str = ""
     user_model_context: str = ""
     reflection_context: str = ""
+    emotion_context: str = ""
     final_system_context: str = ""
     metadata: dict = field(default_factory=dict)
 
@@ -37,11 +39,14 @@ def build_prompt_bundle(
         build_personality_growth_prompt()
     )
 
+    emotion_context = build_emotion_prompt()
+
     personality_context = "\n\n".join(
         section
         for section in (
             personality_context,
             personality_growth_context,
+            emotion_context,
         )
         if section
     )
@@ -80,6 +85,7 @@ def build_prompt_bundle(
         memory_context=memory_context,
         user_model_context=user_model_context,
         reflection_context=reflection_context,
+        emotion_context=emotion_context,
         final_system_context=final_system_context,
         metadata={
             "has_rules": bool(rules_text),
@@ -88,5 +94,6 @@ def build_prompt_bundle(
             "has_memory": bool(memory_context),
             "has_user_model": bool(user_model_context),
             "has_reflection": bool(reflection_context),
+            "has_emotion": bool(emotion_context),
         },
     )
