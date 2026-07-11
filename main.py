@@ -112,6 +112,10 @@ from personality.setup_api import (
     complete_setup_answers,
 )
 
+from personality.adaptive_status_api import (
+    get_adaptive_status_data,
+    reset_adaptive_data,
+)
 from personality.adaptive_runtime_coordinator import (
     process_adaptive_input,
     process_adaptive_output,
@@ -870,6 +874,10 @@ class MemoryDeleteRequest(BaseModel):
 
 
 
+
+class AdaptiveResetRequest(BaseModel):
+    scopes: list[str] | None = None
+
 class PromptDebugRequest(BaseModel):
     user_text: str = ""
     history: list = []
@@ -1149,6 +1157,21 @@ def is_improvement_proposal_text(
     )
 
 
+
+
+
+# =========================================================
+# Adaptive Runtime Status
+# =========================================================
+
+@app.get("/adaptive/status")
+def adaptive_status():
+    return get_adaptive_status_data()
+
+
+@app.post("/adaptive/reset")
+def adaptive_reset(req: AdaptiveResetRequest):
+    return reset_adaptive_data(req.scopes)
 
 
 # =========================================================
